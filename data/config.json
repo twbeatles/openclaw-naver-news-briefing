@@ -1,0 +1,9 @@
+{
+  "naver_api": {
+    "client_id": "",
+    "client_secret": "",
+    "client_secret_enc": "",
+    "client_secret_storage": "plain",
+    "timeout": 15
+  }
+}
