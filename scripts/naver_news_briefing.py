@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import sys
 from pathlib import Path
@@ -84,17 +85,68 @@ def _format_watch_text(rule: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _prompt_required(prompt: str, *, secret: bool = False) -> str:
+    while True:
+        value = (getpass.getpass(prompt) if secret else input(prompt)).strip()
+        if value:
+            return value
+        print("값이 비어 있습니다. 다시 입력해 주세요.")
+
+
+def _render_setup_success(timeout: int) -> str:
+    return "\n".join(
+        [
+            "네이버 Search API 자격증명을 저장했습니다.",
+            "- 저장 위치: data/config.json",
+            f"- 요청 타임아웃: {timeout}초",
+            "- 다음 단계: python scripts/naver_news_briefing.py check-credentials --json",
+            "- 그 다음: python scripts/naver_news_briefing.py search \"최근 3일 반도체 뉴스 브리핑\"",
+        ]
+    )
+
+
 def cmd_setup(args: argparse.Namespace) -> int:
-    set_credentials(args.client_id, args.client_secret, args.timeout)
-    print("저장 완료: 네이버 API 자격증명을 data/config.json에 저장했습니다.")
+    client_id = (args.client_id or "").strip()
+    client_secret = (args.client_secret or "").strip()
+    if not client_id:
+        print("client_id가 없어 대화형 입력으로 전환합니다.")
+        client_id = _prompt_required("네이버 client_id: ")
+    if not client_secret:
+        print("client_secret이 없어 대화형 입력으로 전환합니다.")
+        client_secret = _prompt_required("네이버 client_secret: ", secret=True)
+    set_credentials(client_id, client_secret, args.timeout)
+    print(_render_setup_success(args.timeout))
     return 0
+
+
+def _render_check_credentials_text(payload: Dict[str, Any]) -> str:
+    if payload["configured"]:
+        return "\n".join(
+            [
+                "네이버 Search API 자격증명이 설정되어 있습니다.",
+                f"- client_id 저장 여부: {'예' if payload['client_id_present'] else '아니오'}",
+                f"- client_secret 저장 여부: {'예' if payload['client_secret_present'] else '아니오'}",
+                f"- 요청 타임아웃: {payload['timeout']}초",
+                "- 다음 단계: search / watch / brief-multi / plan-save 를 실행하면 됩니다.",
+            ]
+        )
+    return "\n".join(
+        [
+            "아직 네이버 Search API 자격증명이 설정되지 않았습니다.",
+            f"- client_id 저장 여부: {'예' if payload['client_id_present'] else '아니오'}",
+            f"- client_secret 저장 여부: {'예' if payload['client_secret_present'] else '아니오'}",
+            f"- 요청 타임아웃: {payload['timeout']}초",
+            "- 먼저 실행: python scripts/naver_news_briefing.py setup",
+            "- 확인: python scripts/naver_news_briefing.py check-credentials --json",
+        ]
+    )
 
 
 def cmd_check_credentials(args: argparse.Namespace) -> int:
     client_id, client_secret, timeout, _ = get_runtime_credentials()
     ok = bool(client_id and client_secret)
     payload = {"configured": ok, "client_id_present": bool(client_id), "client_secret_present": bool(client_secret), "timeout": timeout}
-    print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else ("OK" if ok else "MISSING"))
+    print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else _render_check_credentials_text(payload))
     return 0 if ok else 1
 
 
@@ -394,8 +446,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("setup", help="네이버 API 자격증명 저장")
-    p.add_argument("--client-id", required=True)
-    p.add_argument("--client-secret", required=True)
+    p.add_argument("--client-id")
+    p.add_argument("--client-secret")
     p.add_argument("--timeout", type=int, default=15)
     p.set_defaults(func=cmd_setup)
 

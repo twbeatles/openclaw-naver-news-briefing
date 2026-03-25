@@ -73,10 +73,21 @@
 
 ### 1) 최초 온보딩: 자격증명 저장
 
+명령줄 인자를 한 번에 넣는 방식:
+
 ```bash
 python scripts/naver_news_briefing.py setup --client-id YOUR_ID --client-secret YOUR_SECRET
 python scripts/naver_news_briefing.py check-credentials --json
 ```
+
+더 사용자 친화적인 대화형 방식:
+
+```bash
+python scripts/naver_news_briefing.py setup
+```
+
+위처럼 `setup`만 실행하면 CLI가 `client_id`, `client_secret`를 순서대로 물어봅니다.
+특히 `client_secret`는 화면에 그대로 보이지 않도록 입력됩니다.
 
 설명:
 
@@ -84,6 +95,7 @@ python scripts/naver_news_briefing.py check-credentials --json
 - 자격증명은 `data/config.json`에 저장됩니다.
 - Windows에서는 가능하면 DPAPI 기반으로 `client_secret`를 보호합니다.
 - `check-credentials --json`으로 첫 입력이 제대로 끝났는지 바로 검증하세요.
+- 일반 텍스트 확인용으로는 `python scripts/naver_news_briefing.py check-credentials` 도 사용할 수 있습니다.
 
 ### 2) 원샷 브리핑
 
@@ -332,9 +344,16 @@ python scripts/naver_news_briefing.py watch-check samsung-watch --json
 가장 안전한 첫 실행 순서:
 
 ```bash
+python scripts/naver_news_briefing.py setup
+python scripts/naver_news_briefing.py check-credentials
+python scripts/naver_news_briefing.py search "최근 3일 반도체 뉴스 브리핑"
+```
+
+자동화 스크립트나 CI에서는 아래처럼 인자를 직접 넣는 방식도 계속 지원합니다.
+
+```bash
 python scripts/naver_news_briefing.py setup --client-id YOUR_ID --client-secret YOUR_SECRET
 python scripts/naver_news_briefing.py check-credentials --json
-python scripts/naver_news_briefing.py search "최근 3일 반도체 뉴스 브리핑"
 ```
 
 만약 자격증명이 설정되지 않았다면, 다른 명령을 먼저 시도하기보다 **다시 온보딩(setup)부터 안내하는 쪽이 맞습니다.**
