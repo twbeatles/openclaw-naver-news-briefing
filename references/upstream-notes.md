@@ -22,7 +22,8 @@ Use these notes when extending or debugging the skill.
 ## Intentional simplifications vs upstream GUI app
 
 - No PyQt UI, tabs, bookmarks, tray, or backup rotation UI.
-- No full article database; only persistent watch rules and seen-link dedupe for cron-style monitoring.
+- No full article database; only persistent watch rules, keyword groups, and seen-link dedupe for cron-style monitoring.
+- Adapt the upstream tab-search/bookmark mindset into CLI-friendly persistent keyword groups (`group-*`) plus combined briefing templates (`brief-multi`) instead of recreating GUI tabs.
 - Focus on CLI/stdout output that OpenClaw can relay into chat or scheduled jobs.
 
 ## Relevant upstream files
