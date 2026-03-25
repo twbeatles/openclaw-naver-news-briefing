@@ -33,6 +33,32 @@ def _unique_preserve_order(values: List[str]) -> List[str]:
     return unique
 
 
+def _format_missing_reference(kind: str, name_or_id: Any, available_names: List[str] | None = None) -> str:
+    value = str(name_or_id).strip()
+    lines = [f"등록된 {kind}을(를) 찾지 못했습니다: {value}"]
+    if available_names:
+        preview = ", ".join(available_names[:5])
+        lines.append(f"현재 등록된 {kind}: {preview}")
+    lines.append(f"먼저 {kind} 목록을 확인해 주세요.")
+    return " ".join(lines)
+
+
+def _resolve_watch_rule(name_or_id: Any) -> Dict[str, Any]:
+    try:
+        return get_rule(name_or_id)
+    except KeyError as exc:
+        rules = list_rules()
+        raise ValueError(_format_missing_reference("watch rule", name_or_id, [rule["name"] for rule in rules])) from exc
+
+
+def _resolve_group(name_or_id: Any) -> Dict[str, Any]:
+    try:
+        return get_group(name_or_id)
+    except KeyError as exc:
+        groups = list_groups()
+        raise ValueError(_format_missing_reference("키워드 그룹", name_or_id, [group["name"] for group in groups])) from exc
+
+
 def _brief_lines(result: Dict[str, Any], *, title: str | None = None) -> List[str]:
     lines: List[str] = []
     heading = title or f"네이버 뉴스 브리핑: {result['query']}"
@@ -184,7 +210,7 @@ def _run_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def cmd_watch_check(args: argparse.Namespace) -> int:
-    targets = [get_rule(args.name_or_id)] if args.name_or_id else list_rules()
+    targets = [_resolve_watch_rule(args.name_or_id)] if args.name_or_id else list_rules()
     payload = [_run_rule(rule) for rule in targets]
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -235,7 +261,7 @@ def cmd_group_add(args: argparse.Namespace) -> int:
 
 
 def cmd_group_list(args: argparse.Namespace) -> int:
-    groups = [get_group(args.name_or_id)] if args.name_or_id else list_groups()
+    groups = [_resolve_group(args.name_or_id)] if args.name_or_id else list_groups()
     if args.json:
         print(json.dumps(groups if not args.name_or_id else groups[0], ensure_ascii=False, indent=2))
         return 0
@@ -259,6 +285,7 @@ def cmd_group_update(args: argparse.Namespace) -> int:
     tags = None
     if args.tag is not None or args.clear_tags:
         tags = [] if args.clear_tags else args.tag
+    _resolve_group(args.name_or_id)
     group = update_group(args.name_or_id, label=args.label, context=args.context, tags=tags, template=args.template, replace_queries=args.set_query, add_queries=args.add_query, remove_queries=args.remove_query)
     _print_payload(group, as_json=args.json, render_text=_format_group_text)
     return 0
@@ -287,7 +314,7 @@ def cmd_brief_multi(args: argparse.Namespace) -> int:
     groups: List[Dict[str, Any]] = []
     template = args.template
     for group_name in args.group or []:
-        group = get_group(group_name)
+        group = _resolve_group(group_name)
         groups.append(group)
         if not args.template and group.get("template"):
             template = group["template"]
@@ -342,6 +369,8 @@ def cmd_plan_save(args: argparse.Namespace) -> int:
     tags = _unique_preserve_order(tags)
     if not plan.queries:
         raise ValueError("저장 가능한 주제 키워드를 찾지 못했습니다. 요청에 관심 주제를 포함해 주세요.")
+    if args.as_type == "watch" and plan.query_mode == "group":
+        raise ValueError("여러 주제가 감지되어 watch 하나로 저장할 수 없습니다. --as group으로 저장하거나 요청을 한 주제로 좁혀 주세요.")
 
     if args.as_type == "group" or plan.query_mode == "group":
         group = create_group(

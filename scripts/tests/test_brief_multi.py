@@ -66,3 +66,13 @@ def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
     assert payload["template"] == "morning-briefing"
     assert payload["entry_count"] == 2
     assert payload["groups"][0]["name"] == "market-watch"
+
+
+def test_main_brief_multi_missing_group_is_operator_friendly(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "get_group", lambda name: (_ for _ in ()).throw(KeyError(f"keyword group not found: {name}")))
+    monkeypatch.setattr(cli, "list_groups", lambda: [{"name": "market-watch"}])
+    exit_code = cli.main(["brief-multi", "--group", "missing-group"])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "등록된 키워드 그룹을(를) 찾지 못했습니다: missing-group" in captured.err
+    assert "market-watch" in captured.err
