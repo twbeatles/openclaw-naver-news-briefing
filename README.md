@@ -89,13 +89,22 @@ python scripts/naver_news_briefing.py setup
 위처럼 `setup`만 실행하면 CLI가 `client_id`, `client_secret`를 순서대로 물어봅니다.
 특히 `client_secret`는 화면에 그대로 보이지 않도록 입력됩니다.
 
+저장 직후 실제 API까지 바로 확인하고 싶다면:
+
+```bash
+python scripts/naver_news_briefing.py setup --live-check
+python scripts/naver_news_briefing.py setup --test-search "최근 1일 반도체 뉴스"
+```
+
 설명:
 
 - `setup`은 최초 1회 실행하는 온보딩 명령입니다.
+- 입력값에 공백/줄바꿈이 섞였거나 지나치게 짧으면 저장 전에 먼저 알려줍니다.
 - 자격증명은 `data/config.json`에 저장됩니다.
 - Windows에서는 가능하면 DPAPI 기반으로 `client_secret`를 보호합니다.
 - `check-credentials --json`으로 첫 입력이 제대로 끝났는지 바로 검증하세요.
 - 일반 텍스트 확인용으로는 `python scripts/naver_news_briefing.py check-credentials` 도 사용할 수 있습니다.
+- 실제 API까지 확인하려면 `python scripts/naver_news_briefing.py check-credentials --live-check` 를 사용할 수 있습니다.
 
 ### 2) 원샷 브리핑
 
@@ -344,8 +353,8 @@ python scripts/naver_news_briefing.py watch-check samsung-watch --json
 가장 안전한 첫 실행 순서:
 
 ```bash
-python scripts/naver_news_briefing.py setup
-python scripts/naver_news_briefing.py check-credentials
+python scripts/naver_news_briefing.py setup --live-check
+python scripts/naver_news_briefing.py check-credentials --live-check
 python scripts/naver_news_briefing.py search "최근 3일 반도체 뉴스 브리핑"
 ```
 
@@ -368,6 +377,22 @@ python scripts/naver_news_briefing.py check-credentials --json
 - 그 다음에 실제 검색/브리핑 명령으로 넘어가라는 점
 
 즉, **초기 사용자에게는 에러보다 온보딩 안내가 먼저 보이도록** 맞춰 두었습니다.
+
+### 추천 health check 흐름
+
+실제 API가 정상 응답하는지까지 보고 싶다면 아래 흐름이 가장 직관적입니다.
+
+```bash
+python scripts/naver_news_briefing.py setup --live-check
+python scripts/naver_news_briefing.py check-credentials --live-check
+```
+
+원하는 테스트 질의가 있다면:
+
+```bash
+python scripts/naver_news_briefing.py setup --test-search "삼성전자 뉴스"
+python scripts/naver_news_briefing.py check-credentials --live-check --query "삼성전자 뉴스"
+```
 
 ## 운영자 가이드
 

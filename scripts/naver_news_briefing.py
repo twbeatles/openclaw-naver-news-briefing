@@ -23,6 +23,7 @@ from watch_store import add_rule, get_rule, list_rules, mark_seen, remove_rule
 
 
 MISSING_CREDENTIALS_ERROR = "네이버 API 자격증명이 설정되지 않았습니다."
+DEFAULT_TEST_QUERY = "최근 1일 반도체 뉴스"
 
 
 def _brief_lines(result: Dict[str, Any], *, title: str | None = None) -> List[str]:
@@ -93,16 +94,47 @@ def _prompt_required(prompt: str, *, secret: bool = False) -> str:
         print("값이 비어 있습니다. 다시 입력해 주세요.")
 
 
-def _render_setup_success(timeout: int) -> str:
-    return "\n".join(
+def _validate_credential_value(name: str, value: str) -> str:
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        raise ValueError(f"{name} 값이 비어 있습니다.")
+    if any(ch.isspace() for ch in cleaned):
+        raise ValueError(f"{name} 값에 공백이 포함되어 있습니다. 복사 과정에서 줄바꿈/공백이 들어갔는지 확인해 주세요.")
+    if len(cleaned) < 5:
+        raise ValueError(f"{name} 값이 너무 짧습니다. 네이버 개발자센터에서 발급받은 값을 다시 확인해 주세요.")
+    return cleaned
+
+
+def _perform_live_check(query: str, *, limit: int = 1) -> Dict[str, Any]:
+    client_id, client_secret, timeout, _ = get_runtime_credentials()
+    return fetch_news(
+        client_id=client_id,
+        client_secret=client_secret,
+        search_query=query,
+        exclude_words=[],
+        limit=limit,
+        days=None,
+        timeout=timeout,
+    )
+
+
+def _render_setup_success(timeout: int, *, live_checked: bool = False, live_query: str | None = None) -> str:
+    lines = [
+        "네이버 Search API 자격증명을 저장했습니다.",
+        "- 저장 위치: data/config.json",
+        f"- 요청 타임아웃: {timeout}초",
+    ]
+    if live_checked:
+        lines.append(f"- 라이브 API 확인: 성공 ({live_query or DEFAULT_TEST_QUERY})")
+    else:
+        lines.append("- 라이브 API 확인: 생략")
+    lines.extend(
         [
-            "네이버 Search API 자격증명을 저장했습니다.",
-            "- 저장 위치: data/config.json",
-            f"- 요청 타임아웃: {timeout}초",
             "- 다음 단계: python scripts/naver_news_briefing.py check-credentials --json",
             "- 그 다음: python scripts/naver_news_briefing.py search \"최근 3일 반도체 뉴스 브리핑\"",
         ]
     )
+    return "\n".join(lines)
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
@@ -114,38 +146,74 @@ def cmd_setup(args: argparse.Namespace) -> int:
     if not client_secret:
         print("client_secret이 없어 대화형 입력으로 전환합니다.")
         client_secret = _prompt_required("네이버 client_secret: ", secret=True)
+
+    client_id = _validate_credential_value("client_id", client_id)
+    client_secret = _validate_credential_value("client_secret", client_secret)
     set_credentials(client_id, client_secret, args.timeout)
-    print(_render_setup_success(args.timeout))
+
+    live_checked = False
+    live_query = args.test_search or (DEFAULT_TEST_QUERY if args.live_check else None)
+    if live_query:
+        result = _perform_live_check(live_query, limit=1)
+        live_checked = True
+        if args.json:
+            print(json.dumps({
+                "saved": True,
+                "timeout": args.timeout,
+                "live_check": {
+                    "query": live_query,
+                    "ok": True,
+                    "displayed": result.get("displayed", 0),
+                    "total": result.get("total", 0),
+                },
+            }, ensure_ascii=False, indent=2))
+            return 0
+
+    print(_render_setup_success(args.timeout, live_checked=live_checked, live_query=live_query))
     return 0
 
 
 def _render_check_credentials_text(payload: Dict[str, Any]) -> str:
+    lines = [
+        "네이버 Search API 자격증명이 설정되어 있습니다." if payload["configured"] else "아직 네이버 Search API 자격증명이 설정되지 않았습니다.",
+        f"- client_id 저장 여부: {'예' if payload['client_id_present'] else '아니오'}",
+        f"- client_secret 저장 여부: {'예' if payload['client_secret_present'] else '아니오'}",
+        f"- 요청 타임아웃: {payload['timeout']}초",
+    ]
+    live_check = payload.get("live_check")
+    if isinstance(live_check, dict):
+        if live_check.get("ok"):
+            lines.append(f"- 라이브 API 확인: 성공 ({live_check.get('query')})")
+            lines.append(f"- 테스트 결과: total={live_check.get('total', 0)}, displayed={live_check.get('displayed', 0)}")
+        else:
+            lines.append(f"- 라이브 API 확인: 실패 ({live_check.get('query')})")
+            if live_check.get("error"):
+                lines.append(f"- 오류: {live_check['error']}")
     if payload["configured"]:
-        return "\n".join(
-            [
-                "네이버 Search API 자격증명이 설정되어 있습니다.",
-                f"- client_id 저장 여부: {'예' if payload['client_id_present'] else '아니오'}",
-                f"- client_secret 저장 여부: {'예' if payload['client_secret_present'] else '아니오'}",
-                f"- 요청 타임아웃: {payload['timeout']}초",
-                "- 다음 단계: search / watch / brief-multi / plan-save 를 실행하면 됩니다.",
-            ]
-        )
-    return "\n".join(
-        [
-            "아직 네이버 Search API 자격증명이 설정되지 않았습니다.",
-            f"- client_id 저장 여부: {'예' if payload['client_id_present'] else '아니오'}",
-            f"- client_secret 저장 여부: {'예' if payload['client_secret_present'] else '아니오'}",
-            f"- 요청 타임아웃: {payload['timeout']}초",
-            "- 먼저 실행: python scripts/naver_news_briefing.py setup",
-            "- 확인: python scripts/naver_news_briefing.py check-credentials --json",
-        ]
-    )
+        lines.append("- 다음 단계: search / watch / brief-multi / plan-save 를 실행하면 됩니다.")
+    else:
+        lines.append("- 먼저 실행: python scripts/naver_news_briefing.py setup")
+        lines.append("- 확인: python scripts/naver_news_briefing.py check-credentials --json")
+    return "\n".join(lines)
 
 
 def cmd_check_credentials(args: argparse.Namespace) -> int:
     client_id, client_secret, timeout, _ = get_runtime_credentials()
     ok = bool(client_id and client_secret)
-    payload = {"configured": ok, "client_id_present": bool(client_id), "client_secret_present": bool(client_secret), "timeout": timeout}
+    payload: Dict[str, Any] = {"configured": ok, "client_id_present": bool(client_id), "client_secret_present": bool(client_secret), "timeout": timeout}
+    if ok and args.live_check:
+        query = args.query or DEFAULT_TEST_QUERY
+        try:
+            result = _perform_live_check(query, limit=1)
+            payload["live_check"] = {
+                "query": query,
+                "ok": True,
+                "displayed": result.get("displayed", 0),
+                "total": result.get("total", 0),
+            }
+        except Exception as exc:
+            payload["live_check"] = {"query": query, "ok": False, "error": str(exc)}
+            ok = False
     print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else _render_check_credentials_text(payload))
     return 0 if ok else 1
 
@@ -449,10 +517,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--client-id")
     p.add_argument("--client-secret")
     p.add_argument("--timeout", type=int, default=15)
+    p.add_argument("--live-check", action="store_true", help="저장 직후 실제 API 호출로 자격증명을 확인")
+    p.add_argument("--test-search", help="저장 직후 테스트할 검색어 (설정 시 라이브 체크 수행)")
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_setup)
 
     p = sub.add_parser("check-credentials", help="자격증명 상태 확인")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--live-check", action="store_true", help="실제 API 호출까지 포함해 확인")
+    p.add_argument("--query", help="라이브 체크용 검색어")
     p.set_defaults(func=cmd_check_credentials)
 
     p = sub.add_parser("search", help="원샷 뉴스 검색/브리핑")
