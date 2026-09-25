@@ -118,6 +118,7 @@ def create_group(*, name: str, queries: List[str], label: str | None = None, tag
             "INSERT INTO keyword_groups(name, label, tags_json, context, template, schedule_json, operator_hint_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (name, label, json.dumps(tag_values, ensure_ascii=False), context, template, json.dumps(schedule or {}, ensure_ascii=False), json.dumps(operator_hints or {}, ensure_ascii=False), now, now),
         )
+        assert cur.lastrowid is not None
         group_id = int(cur.lastrowid)
         for idx, query in enumerate(clean_queries, start=1):
             conn.execute("INSERT INTO group_queries(group_id, position, raw_query) VALUES (?, ?, ?)", (group_id, idx, query))

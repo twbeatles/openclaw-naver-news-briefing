@@ -270,11 +270,11 @@ def _format_exception_message(exc: Exception) -> str:
         return _render_missing_credentials_guidance()
     if "keyword group not found:" in message:
         missing_name = message.split("keyword group not found:", 1)[1].strip().strip("'")
-        available = [group.get("name") for group in list_groups() if group.get("name")]
+        available = [str(group.get("name")) for group in list_groups() if group.get("name")]
         return _format_missing_named_resource("키워드 그룹", missing_name, available)
     if "watch rule not found:" in message:
         missing_name = message.split("watch rule not found:", 1)[1].strip().strip("'")
-        available = [rule.get("name") for rule in list_rules() if rule.get("name")]
+        available = [str(rule.get("name")) for rule in list_rules() if rule.get("name")]
         return _format_missing_named_resource("watch rule", missing_name, available)
     return f"ERROR: {message}"
 

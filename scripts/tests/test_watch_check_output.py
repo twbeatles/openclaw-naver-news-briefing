@@ -1,9 +1,11 @@
+from argparse import Namespace
+
 import naver_news_briefing as cli
 
 
-class DummyArgs:
+class DummyArgs(Namespace):
     def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+        super().__init__(**kwargs)
 
 
 def test_cmd_watch_check_renders_friendlier_status(monkeypatch, capsys):

@@ -1,12 +1,13 @@
 import json
+from argparse import Namespace
 
 import naver_news_briefing as cli
 from automation_plans import build_integration_bundle, parse_automation_request
 
 
-class DummyArgs:
+class DummyArgs(Namespace):
     def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+        super().__init__(**kwargs)
 
 
 def test_parse_monitoring_interval_plan():

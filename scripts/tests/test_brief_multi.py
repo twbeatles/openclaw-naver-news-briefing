@@ -1,12 +1,13 @@
 import json
+from argparse import Namespace
 
 import naver_news_briefing as cli
 from briefing_templates import build_combined_payload, render_combined_text
 
 
-class DummyArgs:
+class DummyArgs(Namespace):
     def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+        super().__init__(**kwargs)
 
 
 def test_build_combined_payload_and_render_text():
