@@ -4,10 +4,11 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, Iterator, List
 
 from _paths import DB_PATH, ensure_data_dir
 
+from nb_stores.base import normalize_tags, sqlite_database
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS watch_rules (
@@ -41,42 +42,23 @@ CREATE TABLE IF NOT EXISTS seen_items (
 );
 """
 
+MIGRATIONS = {
+    "watch_rules": {
+        "label": "ALTER TABLE watch_rules ADD COLUMN label TEXT",
+        "tags_json": "ALTER TABLE watch_rules ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'",
+        "context": "ALTER TABLE watch_rules ADD COLUMN context TEXT",
+        "template": "ALTER TABLE watch_rules ADD COLUMN template TEXT",
+        "schedule_json": "ALTER TABLE watch_rules ADD COLUMN schedule_json TEXT NOT NULL DEFAULT '{}'",
+        "operator_hint_json": "ALTER TABLE watch_rules ADD COLUMN operator_hint_json TEXT NOT NULL DEFAULT '{}'",
+    }
+}
+
 
 @contextmanager
-def connect():
+def connect() -> Iterator[sqlite3.Connection]:
     ensure_data_dir()
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.executescript(SCHEMA)
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(watch_rules)").fetchall()}
-        migrations = {
-            "label": "ALTER TABLE watch_rules ADD COLUMN label TEXT",
-            "tags_json": "ALTER TABLE watch_rules ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'",
-            "context": "ALTER TABLE watch_rules ADD COLUMN context TEXT",
-            "template": "ALTER TABLE watch_rules ADD COLUMN template TEXT",
-            "schedule_json": "ALTER TABLE watch_rules ADD COLUMN schedule_json TEXT NOT NULL DEFAULT '{}'",
-            "operator_hint_json": "ALTER TABLE watch_rules ADD COLUMN operator_hint_json TEXT NOT NULL DEFAULT '{}'",
-        }
-        for column, sql in migrations.items():
-            if column not in columns:
-                conn.execute(sql)
+    with sqlite_database(DB_PATH, SCHEMA, MIGRATIONS) as conn:
         yield conn
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def _normalize_tags(tags: Iterable[str] | None) -> List[str]:
-    seen = set()
-    result: List[str] = []
-    for tag in tags or []:
-        value = str(tag or "").strip()
-        if not value or value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
 
 
 def list_rules() -> List[Dict[str, Any]]:
@@ -130,7 +112,7 @@ def add_rule(*, name: str, raw_query: str, search_query: str, db_keyword: str, e
                 days,
                 limit,
                 label,
-                json.dumps(_normalize_tags(tags), ensure_ascii=False),
+                json.dumps(normalize_tags(tags), ensure_ascii=False),
                 context,
                 template,
                 json.dumps(schedule or {}, ensure_ascii=False),
@@ -186,3 +168,15 @@ def mark_seen(watch_id: int, items: Iterable[Dict[str, Any]]) -> List[Dict[str, 
             (now, len(new_items), watch_id),
         )
     return new_items
+
+
+__all__ = [
+    "MIGRATIONS",
+    "SCHEMA",
+    "add_rule",
+    "connect",
+    "get_rule",
+    "list_rules",
+    "mark_seen",
+    "remove_rule",
+]

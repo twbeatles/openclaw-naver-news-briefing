@@ -2,7 +2,9 @@ import json
 from argparse import Namespace
 
 import naver_news_briefing as cli
-from briefing_templates import build_combined_payload, render_combined_text
+from nb_briefing import build_combined_payload, render_combined_text
+from nb_cli import app as cli_app
+from nb_cli.commands import briefing as briefing_cmd
 
 
 class DummyArgs(Namespace):
@@ -37,7 +39,7 @@ def test_build_combined_payload_and_render_text():
 
 
 def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "get_group", lambda name: {
+    monkeypatch.setattr(briefing_cmd, "get_group", lambda name: {
         "name": name,
         "label": "관심주제",
         "tags": ["태그"],
@@ -60,7 +62,7 @@ def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
             },
         }
 
-    monkeypatch.setattr(cli, "_run_query_entry", fake_run_query_entry)
+    monkeypatch.setattr(briefing_cmd, "_run_query_entry", fake_run_query_entry)
     args = DummyArgs(group=["market-watch"], query=["환율 뉴스"], limit=5, days=None, template="morning-briefing", json=True)
     assert cli.cmd_brief_multi(args) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -70,8 +72,8 @@ def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
 
 
 def test_main_brief_multi_missing_group_is_operator_friendly(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "get_group", lambda name: (_ for _ in ()).throw(KeyError(f"keyword group not found: {name}")))
-    monkeypatch.setattr(cli, "list_groups", lambda: [{"name": "market-watch"}])
+    monkeypatch.setattr(briefing_cmd, "get_group", lambda name: (_ for _ in ()).throw(KeyError(f"keyword group not found: {name}")))
+    monkeypatch.setattr(cli_app, "list_groups", lambda: [{"name": "market-watch"}])
     exit_code = cli.main(["brief-multi", "--group", "missing-group"])
     captured = capsys.readouterr()
     assert exit_code == 1

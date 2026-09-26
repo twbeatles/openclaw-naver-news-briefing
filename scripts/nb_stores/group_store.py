@@ -4,10 +4,11 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, Iterator, List
 
 from _paths import DB_PATH, ensure_data_dir
 
+from nb_stores.base import normalize_tags, sqlite_database
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS keyword_groups (
@@ -32,39 +33,20 @@ CREATE TABLE IF NOT EXISTS group_queries (
 );
 """
 
+MIGRATIONS = {
+    "keyword_groups": {
+        "template": "ALTER TABLE keyword_groups ADD COLUMN template TEXT",
+        "schedule_json": "ALTER TABLE keyword_groups ADD COLUMN schedule_json TEXT NOT NULL DEFAULT '{}'",
+        "operator_hint_json": "ALTER TABLE keyword_groups ADD COLUMN operator_hint_json TEXT NOT NULL DEFAULT '{}'",
+    }
+}
+
 
 @contextmanager
-def connect():
+def connect() -> Iterator[sqlite3.Connection]:
     ensure_data_dir()
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.executescript(SCHEMA)
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(keyword_groups)").fetchall()}
-        migrations = {
-            "template": "ALTER TABLE keyword_groups ADD COLUMN template TEXT",
-            "schedule_json": "ALTER TABLE keyword_groups ADD COLUMN schedule_json TEXT NOT NULL DEFAULT '{}'",
-            "operator_hint_json": "ALTER TABLE keyword_groups ADD COLUMN operator_hint_json TEXT NOT NULL DEFAULT '{}'",
-        }
-        for column, sql in migrations.items():
-            if column not in columns:
-                conn.execute(sql)
+    with sqlite_database(DB_PATH, SCHEMA, MIGRATIONS) as conn:
         yield conn
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def _normalize_tags(tags: Iterable[str] | None) -> List[str]:
-    seen = set()
-    normalized: List[str] = []
-    for tag in tags or []:
-        value = str(tag or "").strip()
-        if not value or value in seen:
-            continue
-        seen.add(value)
-        normalized.append(value)
-    return normalized
 
 
 def _serialize_group_row(row: sqlite3.Row | tuple[Any, ...], queries: List[str]) -> Dict[str, Any]:
@@ -112,7 +94,7 @@ def create_group(*, name: str, queries: List[str], label: str | None = None, tag
     if not clean_queries:
         raise ValueError("키워드 그룹에는 최소 1개 이상의 쿼리가 필요합니다.")
     now = datetime.now().isoformat(timespec="seconds")
-    tag_values = _normalize_tags(tags)
+    tag_values = normalize_tags(tags)
     with connect() as conn:
         cur = conn.execute(
             "INSERT INTO keyword_groups(name, label, tags_json, context, template, schedule_json, operator_hint_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -133,7 +115,7 @@ def update_group(name_or_id: str | int, *, label: str | None = None, context: st
     new_template = group["template"] if template is None else template
     new_schedule = group["schedule"] if schedule is None else schedule
     new_operator_hints = group["operator_hints"] if operator_hints is None else operator_hints
-    new_tags = group["tags"] if tags is None else _normalize_tags(tags)  # type: ignore[arg-type]
+    new_tags = group["tags"] if tags is None else normalize_tags(tags)  # type: ignore[arg-type]
 
     queries = list(group["queries"])
     if replace_queries is not None:
@@ -166,3 +148,15 @@ def remove_group(name_or_id: str | int) -> int:
     with connect() as conn:
         cur = conn.execute(f"DELETE FROM keyword_groups WHERE {field} = ?", (int(name_or_id) if field == "id" else name_or_id,))
         return int(cur.rowcount or 0)
+
+
+__all__ = [
+    "MIGRATIONS",
+    "SCHEMA",
+    "connect",
+    "create_group",
+    "get_group",
+    "list_groups",
+    "remove_group",
+    "update_group",
+]

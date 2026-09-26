@@ -9,7 +9,7 @@ Use the CLI script at `scripts/naver_news_briefing.py`.
 
 ## Onboarding
 
-- Treat Naver Search API credentials as mandatory before the first real use.
+- Treat Naver Search API credentials as mandatory before the first real use. Keys must come from NAVER API HUB (Ncloud console, Search - 뉴스 API enabled); legacy Developers Center (`openapi.naver.com`) keys are invalid.
 - Tell the user early that search/briefing/watch flows will fail until `client_id` and `client_secret` are stored.
 - If the user has not completed setup yet, direct them to run:
   - `python scripts/naver_news_briefing.py setup --client-id ... --client-secret ...`
@@ -61,6 +61,16 @@ Use the CLI script at `scripts/naver_news_briefing.py`.
 - `integration-plan` returns a more practical operator bundle: save command, run command, schedule object, cron line, OpenClaw-friendly systemEvent text, and a Korean confirmation summary.
 - `plan-save` materializes a parsed plan into a saved `watch` or `group` configuration without owning cron wiring itself.
 - `brief-multi` returns chat-friendly combined text by default and structured JSON with `--json`.
+
+## Code layout (`scripts/`)
+
+- `naver_news_briefing.py` — thin CLI entry + facade (keeps `main`, `cmd_*` importable).
+- `nb_cli/` — `app.py` (argparse + `main`), `commands/` (one module per command group), `services.py` (fetch orchestration), `rendering.py` (text formatters).
+- `nb_api/` — `client.py` (API HUB fetch), `errors.py`, `models.py`.
+- `nb_query/` — `tokens.py`, `natural.py`, `intent.py`.
+- `nb_stores/` — `config_store.py`, `watch_store.py`, `group_store.py`, `base.py` (shared SQLite/tag helpers).
+- `nb_briefing/` — output templates. `nb_planning/` — `detect.py`, `service.py`, `bundle.py`, `models.py`.
+- Tests patch the canonical locations (e.g. `nb_cli.commands.watch.get_rule`), not the facade.
 
 ## Notes
 

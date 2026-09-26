@@ -4,7 +4,6 @@ import json
 from collections import Counter
 from typing import Any, Dict, List
 
-
 TEMPLATES = {
     "concise": "핵심만 빠르게 묶는 짧은 브리핑",
     "analyst": "질문별 핵심 흐름과 시사점을 조금 더 분석적으로 정리",
@@ -131,3 +130,12 @@ def render_combined_text(payload: Dict[str, Any]) -> str:
 
 def render_combined_json(payload: Dict[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+__all__ = [
+    "TEMPLATES",
+    "build_combined_payload",
+    "render_combined_json",
+    "render_combined_text",
+    "supported_templates",
+]

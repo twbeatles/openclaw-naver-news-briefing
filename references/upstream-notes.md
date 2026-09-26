@@ -12,9 +12,11 @@ Use these notes when extending or debugging the skill.
   - Preserve `build_fetch_key(search_query, exclude_words)` normalization.
 - `core.config_store.py`
   - Reuse Windows-first credential handling with DPAPI-encrypted `client_secret_enc` and atomic config writes.
-- `core.workers.ApiWorker`
-  - Reuse request shape: `https://openapi.naver.com/v1/search/news.json`
-  - Use headers `X-Naver-Client-Id`, `X-Naver-Client-Secret`
+- `core.naver_api` + `core.workers_support.api_worker.ApiWorker` (v32.7.6+ NAVER API HUB)
+  - Reuse request shape: `https://naverapihub.apigw.ntruss.com/search/v1/news`
+  - Use gateway headers `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY`
+  - Reuse `parse_naver_api_error` (Search flat + Gateway nested) and `format_naver_http_error` (401/403 auth 안내)
+  - Legacy Developers Center endpoint로는 되돌리지 않는다. 기존 개발자센터 키는 무효하다.
   - Use `sort=date`, clean `<b>` tags, prefer `news.naver.com` links when present, filter exclude words on title/description.
 - Repo persistence style
   - Keep state on local disk inside the skill (`data/`), use atomic JSON for config and SQLite for watch state / dedupe.

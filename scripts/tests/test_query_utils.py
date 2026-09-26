@@ -1,4 +1,10 @@
-from query_utils import build_intent, clean_natural_query, parse_search_query, parse_tab_query
+from nb_query import (
+    build_intent,
+    clean_natural_query,
+    has_positive_keyword,
+    parse_search_query,
+    parse_tab_query,
+)
 
 
 def test_parse_queries_match_upstream_policy():
@@ -30,3 +36,9 @@ def test_build_intent_strips_particles_and_dedupes_tokens():
     intent = build_intent("반도체를 반도체 관련 뉴스 찾아줘")
     assert intent.search_query == "반도체"
     assert intent.exclude_words == []
+
+
+def test_has_positive_keyword_matches_upstream_policy():
+    assert has_positive_keyword("인공지능 AI -광고") is True
+    assert has_positive_keyword("-광고 -코인") is False
+    assert has_positive_keyword("") is False

@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 import html
-import json
 import re
+import time
 import urllib.parse
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Protocol
 
 import requests
 
-RE_BOLD_TAGS = re.compile(r"</?b>")
-API_URL = "https://openapi.naver.com/v1/search/news.json"
+from nb_api.errors import format_naver_http_error, parse_naver_api_error
+from nb_api.models import NewsItem
+
+# Upstream: navernews-tabsearch core/naver_api.py (NAVER API HUB, v32.7.6+).
+# Legacy Developers Center endpoint (openapi.naver.com, X-Naver-Client-*)는
+# 더 이상 유효하지 않으므로 API HUB 계약을 따른다.
+API_URL = "https://naverapihub.apigw.ntruss.com/search/v1/news"
+API_KEY_ID_HEADER = "X-NCP-APIGW-API-KEY-ID"
+API_KEY_HEADER = "X-NCP-APIGW-API-KEY"
+API_HUB_PRODUCT_URL = "https://www.ncloud.com/product/applicationService/naverApiHub"
+API_HUB_GUIDE_URL = "https://guide.ncloud-docs.com/docs/apihub-use"
+MAX_RETRIES = 3
 
 
 class ResponseLike(Protocol):
@@ -26,18 +35,15 @@ class SessionLike(Protocol):
     def get(self, url: str, *, headers: Dict[str, str], params: Dict[str, Any], timeout: int) -> ResponseLike: ...
 
 
-@dataclass
-class NewsItem:
-    title: str
-    description: str
-    link: str
-    original_link: str
-    publisher: str
-    pub_date: str
-    pub_date_iso: str | None
+def naver_auth_headers(client_id: str, client_secret: str) -> Dict[str, str]:
+    """API HUB 호출용 게이트웨이 인증 헤더를 만든다."""
+    return {
+        API_KEY_ID_HEADER: str(client_id or "").strip(),
+        API_KEY_HEADER: str(client_secret or "").strip(),
+    }
 
-    def to_dict(self) -> Dict[str, Any]:
-        return self.__dict__.copy()
+
+RE_BOLD_TAGS = re.compile(r"</?b>")
 
 
 def parse_pub_date(value: str) -> str | None:
@@ -81,6 +87,10 @@ def clean_item(item: Dict[str, Any]) -> NewsItem:
     )
 
 
+def _retry_backoff_seconds(attempt: int) -> float:
+    return min(8.0, 0.5 * (2**max(0, attempt)))
+
+
 def fetch_news(
     *,
     client_id: str,
@@ -91,6 +101,7 @@ def fetch_news(
     days: int | None = None,
     timeout: int = 15,
     session: SessionLike | None = None,
+    max_retries: int = MAX_RETRIES,
 ) -> Dict[str, Any]:
     if not search_query.strip():
         raise ValueError("검색어가 비어 있습니다.")
@@ -98,22 +109,30 @@ def fetch_news(
         raise ValueError("네이버 API 자격증명이 설정되지 않았습니다.")
 
     active_session = session or requests.Session()
-    resp = active_session.get(
-        API_URL,
-        headers={
-            "X-Naver-Client-Id": client_id.strip(),
-            "X-Naver-Client-Secret": client_secret.strip(),
-        },
-        params={"query": search_query, "display": min(max(limit, 10), 100), "start": 1, "sort": "date"},
-        timeout=timeout,
-    )
+    headers = naver_auth_headers(client_id, client_secret)
+    params = {"query": search_query, "display": min(max(limit, 10), 100), "start": 1, "sort": "date"}
+
+    attempts = max(1, int(max_retries or 1))
+    resp = active_session.get(API_URL, headers=headers, params=params, timeout=timeout)
+    for attempt in range(1, attempts):
+        if resp.status_code == 200:
+            break
+        if not 500 <= int(resp.status_code or 0) < 600:
+            break
+        time.sleep(_retry_backoff_seconds(attempt - 1))
+        resp = active_session.get(API_URL, headers=headers, params=params, timeout=timeout)
+
     if resp.status_code != 200:
         try:
             payload = resp.json()
-            msg = f"API 오류 {resp.status_code} ({payload.get('errorCode', '')}): {payload.get('errorMessage', '알 수 없는 오류')}"
+            error_code, error_msg = parse_naver_api_error(payload)
         except Exception:
-            msg = f"API 오류 {resp.status_code}: {getattr(resp, 'text', '')[:200]}"
-        raise RuntimeError(msg)
+            error_code, error_msg = "", ""
+            try:
+                error_msg = f"HTTP {resp.status_code}: {getattr(resp, 'text', '')[:200]}"
+            except Exception:
+                error_msg = f"HTTP {resp.status_code}"
+        raise RuntimeError(format_naver_http_error(resp.status_code, error_code, error_msg or "알 수 없는 오류"))
 
     data = resp.json()
     exclude_words_lc = [w.lower() for w in exclude_words if w]
@@ -152,3 +171,19 @@ def fetch_news(
         "items": [item.to_dict() for item in items],
         "raw_meta": {"lastBuildDate": data.get("lastBuildDate", "")},
     }
+
+
+__all__ = [
+    "API_HUB_GUIDE_URL",
+    "API_HUB_PRODUCT_URL",
+    "API_KEY_HEADER",
+    "API_KEY_ID_HEADER",
+    "API_URL",
+    "MAX_RETRIES",
+    "ResponseLike",
+    "SessionLike",
+    "clean_item",
+    "fetch_news",
+    "naver_auth_headers",
+    "parse_pub_date",
+]

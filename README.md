@@ -3,7 +3,8 @@
 네이버 Search API 기반으로 **뉴스 검색 / 브리핑 / 지속 감시 / 키워드 그룹 / 자동화 계획 생성**을 수행하는 OpenClaw 스킬입니다.
 
 > [!IMPORTANT]
-> 이 스킬은 **네이버 개발자센터에서 발급받은 Search API 자격증명(client_id, client_secret)이 있어야만 정상 동작**합니다.
+> 이 스킬은 **네이버 클라우드 플랫폼의 NAVER API HUB에서 발급받은 Search API 자격증명(client_id, client_secret)이 있어야만 정상 동작**합니다.
+> 기존 네이버 개발자센터(`openapi.naver.com`) 키는 지원되지 않습니다. Ncloud 콘솔(Services → Application Services → NAVER API HUB)에서 Application을 등록하고 **검색(Search - 뉴스)** API를 추가한 뒤 발급받은 키를 사용하세요.
 > 설치만으로 바로 검색되지는 않으며, **최초 1회 자격증명 입력(onboarding/setup)** 을 반드시 거쳐야 합니다.
 
 이 스킬의 핵심은 단순 검색이 아니라 **채팅형 한국어 요청을 실제 운영 가능한 로컬 설정으로 연결**하는 데 있습니다.
@@ -66,8 +67,8 @@
 
 이 스킬을 처음 쓰는 사용자는 먼저 아래를 준비해야 합니다.
 
-- 네이버 개발자센터에서 발급받은 `client_id`
-- 네이버 개발자센터에서 발급받은 `client_secret`
+- NAVER API HUB에서 발급받은 `client_id`
+- NAVER API HUB에서 발급받은 `client_secret`
 
 자격증명이 없으면 `search`, `watch-add`, `watch-check`, `brief-multi`, `plan-save` 같은 실제 운영 명령은 정상적으로 끝까지 진행되지 않습니다.
 
@@ -377,7 +378,7 @@ python scripts/naver_news_briefing.py watch-check samsung-watch --json
 
 처음 설치한 사용자는 아래 순서로 시작하면 됩니다.
 
-1. 네이버 Search API 자격증명(`client_id`, `client_secret`)을 준비합니다.
+1. NAVER API HUB 자격증명(`client_id`, `client_secret`)을 준비합니다. Ncloud 콘솔 → Services → Application Services → NAVER API HUB에서 Application을 등록하고 **검색(Search - 뉴스)** API를 추가한 뒤 인증 정보에서 두 값을 복사합니다. 기존 개발자센터 키는 동작하지 않으며, 401/403 오류가 나면 이 등록 단계를 먼저 확인하세요.
 2. `setup` 명령으로 최초 입력을 완료합니다.
 3. `check-credentials --json`으로 유효성을 확인합니다.
 4. 그 다음에만 `search` 또는 `plan`/`plan-save` 흐름으로 넘어갑니다.
@@ -512,6 +513,15 @@ watch 예시:
 - `references/upstream-notes.md`: upstream 설계 메모
 
 ---
+
+## 코드 구조 (`scripts/`)
+
+- `naver_news_briefing.py` — CLI 진입점. 실행 명령은 그대로 `python scripts/naver_news_briefing.py ...` 입니다.
+- `nb_cli/` — 명령어(`commands/`), 조회 흐름(`services.py`), 텍스트 출력(`rendering.py`), 파서/`main`(`app.py`).
+- `nb_api/` — NAVER API HUB 호출·오류 파싱·기사 모델.
+- `nb_query/` — 검색어 분리·한국어 정규화·브리핑 인텐트.
+- `nb_stores/` — 자격증명/watch/group 영속성(SQLite).
+- `nb_briefing/` — 브리핑 템플릿. `nb_planning/` — 자동화 계획 해석·연동 번들.
 
 ## 테스트
 

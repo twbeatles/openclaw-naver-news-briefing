@@ -1,6 +1,7 @@
 from argparse import Namespace
 
 import naver_news_briefing as cli
+from nb_cli.commands import watch as watch_cmd
 
 
 class DummyArgs(Namespace):
@@ -9,7 +10,7 @@ class DummyArgs(Namespace):
 
 
 def test_cmd_watch_check_renders_friendlier_status(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "get_rule", lambda name: {
+    monkeypatch.setattr(watch_cmd, "get_rule", lambda name: {
         "id": 1,
         "name": name,
         "search_query": "방미심위",
@@ -17,7 +18,7 @@ def test_cmd_watch_check_renders_friendlier_status(monkeypatch, capsys):
         "days": None,
     })
 
-    monkeypatch.setattr(cli, "_run_rule", lambda rule: {
+    monkeypatch.setattr(watch_cmd, "_run_rule", lambda rule: {
         "rule": rule,
         "summary": {
             "query": "방미심위",

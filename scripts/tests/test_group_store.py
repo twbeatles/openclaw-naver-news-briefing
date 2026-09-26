@@ -1,5 +1,11 @@
-import group_store
-from group_store import create_group, get_group, list_groups, remove_group, update_group
+import nb_stores.group_store as group_store
+from nb_stores.group_store import (
+    create_group,
+    get_group,
+    list_groups,
+    remove_group,
+    update_group,
+)
 
 
 def test_group_store_create_update_remove(tmp_path, monkeypatch):

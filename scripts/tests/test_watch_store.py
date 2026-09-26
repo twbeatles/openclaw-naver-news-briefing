@@ -1,5 +1,5 @@
-import watch_store
-from watch_store import add_rule, get_rule, list_rules, mark_seen, remove_rule
+import nb_stores.watch_store as watch_store
+from nb_stores.watch_store import add_rule, get_rule, list_rules, mark_seen, remove_rule
 
 
 def test_watch_store_add_list_seen_remove(tmp_path, monkeypatch):

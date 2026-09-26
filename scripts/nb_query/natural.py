@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import List, Tuple
-
-
-# Adapted from upstream core.query_parser.py
+import re
+from typing import List
 
 _REQUEST_PHRASES = [
     "뉴스",
@@ -152,61 +148,8 @@ _KOREAN_PARTICLES = [
 ]
 
 
-def _split_query_tokens(raw: str) -> Tuple[List[str], List[str]]:
-    parts = str(raw or "").split()
-    if not parts:
-        return [], []
-
-    positive_words: List[str] = []
-    exclude_words: List[str] = []
-    for token in parts:
-        if token.startswith("-"):
-            if len(token) > 1:
-                exclude_words.append(token[1:])
-            continue
-        positive_words.append(token)
-    return positive_words, exclude_words
-
-
-def parse_tab_query(raw: str) -> Tuple[str, List[str]]:
-    positive_words, exclude_words = _split_query_tokens(raw)
-    db_keyword = positive_words[0] if positive_words else ""
-    return db_keyword, exclude_words
-
-
-def parse_search_query(raw: str) -> Tuple[str, List[str]]:
-    positive_words, exclude_words = _split_query_tokens(raw)
-    search_query = " ".join(positive_words)
-    return search_query, exclude_words
-
-
-def build_fetch_key(search_keyword: str, exclude_words: List[str]) -> str:
-    normalized_keyword = (search_keyword or "").strip().lower()
-    normalized_excludes = sorted(
-        {
-            word.strip().lower()
-            for word in (exclude_words or [])
-            if isinstance(word, str) and word.strip()
-        }
-    )
-    return f"{normalized_keyword}|{'|'.join(normalized_excludes)}"
-
-
-@dataclass(frozen=True)
-class QueryIntent:
-    raw_query: str
-    search_query: str
-    db_keyword: str
-    exclude_words: List[str]
-    fetch_key: str
-    days: int | None
-    limit: int
-
-
 def detect_recent_days(raw: str) -> int | None:
     lowered = str(raw or "").lower()
-
-    import re
 
     patterns = [
         r"최근\s*(\d+)\s*일",
@@ -240,8 +183,6 @@ def detect_recent_days(raw: str) -> int | None:
 
 
 def _normalize_spacing(raw: str) -> str:
-    import re
-
     text = str(raw or "").strip()
     text = re.sub(r"[\[\]\(\){}<>\"'“”‘’,:;!?/~`]+", " ", text)
     text = text.replace("·", " ").replace("…", " ")
@@ -250,8 +191,6 @@ def _normalize_spacing(raw: str) -> str:
 
 
 def _apply_exclude_phrases(raw: str) -> str:
-    import re
-
     text = _normalize_spacing(raw)
     patterns = [
         r"([가-힣A-Za-z0-9+#./_-]+(?:\s+[가-힣A-Za-z0-9+#./_-]+){0,2})\s*(?:말고|빼고|제외|제외하고|제외한|없이)",
@@ -288,8 +227,6 @@ def _strip_particle(token: str) -> str:
 
 
 def _normalize_token(token: str) -> str:
-    import re
-
     token = _strip_particle(token)
     token = token.strip("- ") if token == "-" else token.strip()
     token = re.sub(r"^[^\w가-힣+#]+|[^\w가-힣+#-]+$", "", token)
@@ -302,8 +239,6 @@ def _normalize_token(token: str) -> str:
 
 
 def clean_natural_query(raw: str) -> str:
-    import re
-
     stripped = _apply_exclude_phrases(raw)
 
     for token in _REQUEST_PHRASES:
@@ -339,26 +274,4 @@ def clean_natural_query(raw: str) -> str:
     return " ".join(deduped)
 
 
-def build_intent(raw_query: str, *, limit: int = 10, days: int | None = None) -> QueryIntent:
-    cleaned = clean_natural_query(raw_query)
-    detected_days = days if days is not None else detect_recent_days(raw_query)
-    search_query, exclude_words = parse_search_query(cleaned)
-    db_keyword, _ = parse_tab_query(cleaned)
-    if not search_query:
-        raise ValueError("최소 1개 이상의 일반 키워드가 필요합니다.")
-    return QueryIntent(
-        raw_query=raw_query,
-        search_query=search_query,
-        db_keyword=db_keyword or search_query,
-        exclude_words=exclude_words,
-        fetch_key=build_fetch_key(search_query, exclude_words),
-        days=detected_days,
-        limit=max(1, min(100, int(limit))),
-    )
-
-
-def cutoff_iso(days: int | None, now: datetime | None = None) -> str | None:
-    if not days:
-        return None
-    base = now or datetime.now()
-    return (base - timedelta(days=days)).isoformat(timespec="seconds")
+__all__ = ["clean_natural_query", "detect_recent_days"]
