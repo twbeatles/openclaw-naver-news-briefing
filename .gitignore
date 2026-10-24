@@ -5,3 +5,11 @@ data/*.db
 data/config.json
 __watch_out.txt
 __watch_stdout.txt
+
+# Added by environment hygiene
+.codegraph/
+build/
+dist/
+*.spec
+*.log
+
