@@ -109,30 +109,48 @@ def fetch_news(
         raise ValueError("네이버 API 자격증명이 설정되지 않았습니다.")
 
     active_session = session or requests.Session()
-    headers = naver_auth_headers(client_id, client_secret)
     params = {"query": search_query, "display": min(max(limit, 10), 100), "start": 1, "sort": "date"}
 
-    attempts = max(1, int(max_retries or 1))
-    resp = active_session.get(API_URL, headers=headers, params=params, timeout=timeout)
-    for attempt in range(1, attempts):
-        if resp.status_code == 200:
-            break
-        if not 500 <= int(resp.status_code or 0) < 600:
-            break
-        time.sleep(_retry_backoff_seconds(attempt - 1))
-        resp = active_session.get(API_URL, headers=headers, params=params, timeout=timeout)
+    endpoint_candidates = [
+        # 1. 네이버 개발자센터 (openapi.naver.com)
+        ("https://openapi.naver.com/v1/search/news.json", {
+            "X-Naver-Client-Id": client_id.strip(),
+            "X-Naver-Client-Secret": client_secret.strip(),
+        }),
+        # 2. NAVER API HUB (ncloud apigw)
+        (API_URL, naver_auth_headers(client_id, client_secret)),
+    ]
 
-    if resp.status_code != 200:
+    last_resp: ResponseLike | None = None
+    resp: ResponseLike | None = None
+    for ep_url, ep_headers in endpoint_candidates:
+        attempts = max(1, int(max_retries or 1))
+        current_resp = active_session.get(ep_url, headers=ep_headers, params=params, timeout=timeout)
+        for attempt in range(1, attempts):
+            if current_resp.status_code == 200:
+                break
+            if not 500 <= int(current_resp.status_code or 0) < 600:
+                break
+            time.sleep(_retry_backoff_seconds(attempt - 1))
+            current_resp = active_session.get(ep_url, headers=ep_headers, params=params, timeout=timeout)
+        last_resp = current_resp
+        if current_resp.status_code == 200:
+            resp = current_resp
+            break
+
+    if resp is None or resp.status_code != 200:
+        target_resp = resp or last_resp
+        status = target_resp.status_code if target_resp else 500
         try:
-            payload = resp.json()
+            payload = target_resp.json() if target_resp else {}
             error_code, error_msg = parse_naver_api_error(payload)
         except Exception:
             error_code, error_msg = "", ""
             try:
-                error_msg = f"HTTP {resp.status_code}: {getattr(resp, 'text', '')[:200]}"
+                error_msg = f"HTTP {status}: {getattr(target_resp, 'text', '')[:200]}"
             except Exception:
-                error_msg = f"HTTP {resp.status_code}"
-        raise RuntimeError(format_naver_http_error(resp.status_code, error_code, error_msg or "알 수 없는 오류"))
+                error_msg = f"HTTP {status}"
+        raise RuntimeError(format_naver_http_error(status, error_code, error_msg or "알 수 없는 오류"))
 
     data = resp.json()
     exclude_words_lc = [w.lower() for w in exclude_words if w]
