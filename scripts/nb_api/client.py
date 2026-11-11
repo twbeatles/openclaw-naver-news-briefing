@@ -25,8 +25,11 @@ MAX_RETRIES = 3
 
 
 class ResponseLike(Protocol):
-    status_code: int
-    text: str
+    @property
+    def status_code(self) -> int: ...
+
+    @property
+    def text(self) -> str: ...
 
     def json(self) -> Dict[str, Any]: ...
 
@@ -111,13 +114,9 @@ def fetch_news(
     active_session = session or requests.Session()
     params = {"query": search_query, "display": min(max(limit, 10), 100), "start": 1, "sort": "date"}
 
+    # Owner decision D3: NAVER API HUB URL이 정답. Legacy 개발자센터
+    # (openapi.naver.com) 폴백 제거 — 해당 키는 더 이상 유효하지 않음.
     endpoint_candidates = [
-        # 1. 네이버 개발자센터 (openapi.naver.com)
-        ("https://openapi.naver.com/v1/search/news.json", {
-            "X-Naver-Client-Id": client_id.strip(),
-            "X-Naver-Client-Secret": client_secret.strip(),
-        }),
-        # 2. NAVER API HUB (ncloud apigw)
         (API_URL, naver_auth_headers(client_id, client_secret)),
     ]
 
