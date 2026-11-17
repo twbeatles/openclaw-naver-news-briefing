@@ -25,7 +25,13 @@ def test_build_combined_payload_and_render_text():
                     "total": 10,
                     "filtered_out": 0,
                     "too_old": 0,
-                    "items": [{"title": "반도체 상승", "publisher": "연합", "link": "https://example.com/a"}],
+                    "items": [
+                        {
+                            "title": "반도체 상승",
+                            "publisher": "연합",
+                            "link": "https://example.com/a",
+                        }
+                    ],
                 },
             }
         ],
@@ -39,15 +45,21 @@ def test_build_combined_payload_and_render_text():
 
 
 def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
-    monkeypatch.setattr(briefing_cmd, "get_group", lambda name: {
-        "name": name,
-        "label": "관심주제",
-        "tags": ["태그"],
-        "context": "체크 포인트",
-        "queries": ["반도체 -광고"],
-    })
+    monkeypatch.setattr(
+        briefing_cmd,
+        "get_group",
+        lambda name: {
+            "name": name,
+            "label": "관심주제",
+            "tags": ["태그"],
+            "context": "체크 포인트",
+            "queries": ["반도체 -광고"],
+        },
+    )
 
-    def fake_run_query_entry(query, *, limit, days, group=None, label=None, context=None):
+    def fake_run_query_entry(
+        query, *, limit, days, group=None, label=None, context=None
+    ):
         return {
             "query": query,
             "group_name": group["name"] if group else None,
@@ -58,12 +70,25 @@ def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
                 "total": 3,
                 "filtered_out": 0,
                 "too_old": 0,
-                "items": [{"title": f"{query} 기사", "publisher": "연합", "link": "https://example.com/x"}],
+                "items": [
+                    {
+                        "title": f"{query} 기사",
+                        "publisher": "연합",
+                        "link": "https://example.com/x",
+                    }
+                ],
             },
         }
 
     monkeypatch.setattr(briefing_cmd, "_run_query_entry", fake_run_query_entry)
-    args = DummyArgs(group=["market-watch"], query=["환율 뉴스"], limit=5, days=None, template="morning-briefing", json=True)
+    args = DummyArgs(
+        group=["market-watch"],
+        query=["환율 뉴스"],
+        limit=5,
+        days=None,
+        template="morning-briefing",
+        json=True,
+    )
     assert cli.cmd_brief_multi(args) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["template"] == "morning-briefing"
@@ -72,7 +97,13 @@ def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
 
 
 def test_main_brief_multi_missing_group_is_operator_friendly(monkeypatch, capsys):
-    monkeypatch.setattr(briefing_cmd, "get_group", lambda name: (_ for _ in ()).throw(KeyError(f"keyword group not found: {name}")))
+    monkeypatch.setattr(
+        briefing_cmd,
+        "get_group",
+        lambda name: (_ for _ in ()).throw(
+            KeyError(f"keyword group not found: {name}")
+        ),
+    )
     monkeypatch.setattr(cli_app, "list_groups", lambda: [{"name": "market-watch"}])
     exit_code = cli.main(["brief-multi", "--group", "missing-group"])
     captured = capsys.readouterr()

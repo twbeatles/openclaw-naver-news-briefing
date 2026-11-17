@@ -26,7 +26,15 @@ _TIME_OF_DAY_HINTS = {
     "밤": "21:00",
     "새벽": "06:00",
 }
-_DAYS_OF_WEEK = {"월": "mon", "화": "tue", "수": "wed", "목": "thu", "금": "fri", "토": "sat", "일": "sun"}
+_DAYS_OF_WEEK = {
+    "월": "mon",
+    "화": "tue",
+    "수": "wed",
+    "목": "thu",
+    "금": "fri",
+    "토": "sat",
+    "일": "sun",
+}
 _DOW_CRON = {"mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6, "sun": 0}
 
 
@@ -89,7 +97,9 @@ def normalize_query_order(query: str) -> str:
 def extract_queries(raw: str) -> List[str]:
     text = strip_schedule_and_action_phrases(normalize_request(raw))
     split_pattern = r"\s*(?:,|/|\+|그리고|및|이랑|와|과|랑|하고)\s*"
-    candidates = [part.strip() for part in re.split(split_pattern, text) if part.strip()]
+    candidates = [
+        part.strip() for part in re.split(split_pattern, text) if part.strip()
+    ]
     queries: List[str] = []
     for candidate in candidates:
         cleaned = normalize_query_order(clean_natural_query(candidate))
@@ -107,7 +117,9 @@ def extract_queries(raw: str) -> List[str]:
 
 
 def detect_explicit_time(text: str) -> str | None:
-    prefixed = re.search(r"(아침|오전|오후|저녁|밤|새벽)\s*(\d{1,2})(?:[:시]\s*(\d{1,2}))?분?", text)
+    prefixed = re.search(
+        r"(아침|오전|오후|저녁|밤|새벽)\s*(\d{1,2})(?:[:시]\s*(\d{1,2}))?분?", text
+    )
     if prefixed:
         prefix = prefixed.group(1)
         hour = int(prefixed.group(2))
@@ -130,31 +142,62 @@ def detect_schedule(raw: str) -> SchedulePlan:
     text = normalize_request(raw)
 
     if re.search(r"실시간|수시로|계속|지속적으로", text):
-        return SchedulePlan(kind="interval", label="15분마다", cron="*/15 * * * *", interval_minutes=15)
+        return SchedulePlan(
+            kind="interval", label="15분마다", cron="*/15 * * * *", interval_minutes=15
+        )
 
     every_n_hours = re.search(r"(\d+)\s*시간(?:마다|간격)", text)
     if every_n_hours:
         hours = max(1, int(every_n_hours.group(1)))
         minutes = hours * 60
-        cron = f"0 */{hours} * * *" if minutes >= 60 and minutes % 60 == 0 else f"*/{minutes} * * * *"
-        return SchedulePlan(kind="interval", label=f"{hours}시간마다", cron=cron, interval_minutes=minutes)
+        cron = (
+            f"0 */{hours} * * *"
+            if minutes >= 60 and minutes % 60 == 0
+            else f"*/{minutes} * * * *"
+        )
+        return SchedulePlan(
+            kind="interval",
+            label=f"{hours}시간마다",
+            cron=cron,
+            interval_minutes=minutes,
+        )
 
     every_n_minutes = re.search(r"(\d+)\s*분(?:마다|간격)", text)
     if every_n_minutes:
         minutes = max(1, int(every_n_minutes.group(1)))
-        return SchedulePlan(kind="interval", label=f"{minutes}분마다", cron=f"*/{minutes} * * * *", interval_minutes=minutes)
+        return SchedulePlan(
+            kind="interval",
+            label=f"{minutes}분마다",
+            cron=f"*/{minutes} * * * *",
+            interval_minutes=minutes,
+        )
 
     weekly = re.search(r"매주\s*([월화수목금토일])요일?", text)
     if weekly:
         day = _DAYS_OF_WEEK[weekly.group(1)]
-        time = detect_explicit_time(text) or next((v for k, v in _TIME_OF_DAY_HINTS.items() if k in text), "08:00")
+        time = detect_explicit_time(text) or next(
+            (v for k, v in _TIME_OF_DAY_HINTS.items() if k in text), "08:00"
+        )
         hh, mm = time.split(":")
-        return SchedulePlan(kind="weekly", label=f"매주 {weekly.group(1)}요일 {time}", cron=f"{int(mm)} {int(hh)} * * {_DOW_CRON[day]}", time=time, days_of_week=[day])
+        return SchedulePlan(
+            kind="weekly",
+            label=f"매주 {weekly.group(1)}요일 {time}",
+            cron=f"{int(mm)} {int(hh)} * * {_DOW_CRON[day]}",
+            time=time,
+            days_of_week=[day],
+        )
 
     if "매일" in text:
-        time = detect_explicit_time(text) or next((v for k, v in _TIME_OF_DAY_HINTS.items() if k in text), "08:00")
+        time = detect_explicit_time(text) or next(
+            (v for k, v in _TIME_OF_DAY_HINTS.items() if k in text), "08:00"
+        )
         hh, mm = time.split(":")
-        return SchedulePlan(kind="daily", label=f"매일 {time}", cron=f"{int(mm)} {int(hh)} * * *", time=time)
+        return SchedulePlan(
+            kind="daily",
+            label=f"매일 {time}",
+            cron=f"{int(mm)} {int(hh)} * * *",
+            time=time,
+        )
 
     return SchedulePlan(kind="manual", label="수동 실행")
 

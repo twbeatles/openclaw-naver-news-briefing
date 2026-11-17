@@ -28,9 +28,13 @@ def _validate_credential_value(name: str, value: str) -> str:
     if not cleaned:
         raise ValueError(f"{name} 값이 비어 있습니다.")
     if any(ch.isspace() for ch in cleaned):
-        raise ValueError(f"{name} 값에 공백이 포함되어 있습니다. 복사 과정에서 줄바꿈/공백이 들어갔는지 확인해 주세요.")
+        raise ValueError(
+            f"{name} 값에 공백이 포함되어 있습니다. 복사 과정에서 줄바꿈/공백이 들어갔는지 확인해 주세요."
+        )
     if len(cleaned) < 5:
-        raise ValueError(f"{name} 값이 너무 짧습니다. NAVER API HUB에서 발급받은 값을 다시 확인해 주세요.")
+        raise ValueError(
+            f"{name} 값이 너무 짧습니다. NAVER API HUB에서 발급받은 값을 다시 확인해 주세요."
+        )
     return cleaned
 
 
@@ -54,26 +58,41 @@ def cmd_setup(args: argparse.Namespace) -> int:
         result = _perform_live_check(live_query, limit=1)
         live_checked = True
         if args.json:
-            print(json.dumps({
-                "saved": True,
-                "timeout": args.timeout,
-                "live_check": {
-                    "query": live_query,
-                    "ok": True,
-                    "displayed": result.get("displayed", 0),
-                    "total": result.get("total", 0),
-                },
-            }, ensure_ascii=False, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "saved": True,
+                        "timeout": args.timeout,
+                        "live_check": {
+                            "query": live_query,
+                            "ok": True,
+                            "displayed": result.get("displayed", 0),
+                            "total": result.get("total", 0),
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
             return 0
 
-    print(_render_setup_success(args.timeout, live_checked=live_checked, live_query=live_query))
+    print(
+        _render_setup_success(
+            args.timeout, live_checked=live_checked, live_query=live_query
+        )
+    )
     return 0
 
 
 def cmd_check_credentials(args: argparse.Namespace) -> int:
     client_id, client_secret, timeout, _ = get_runtime_credentials()
     ok = bool(client_id and client_secret)
-    payload: Dict[str, Any] = {"configured": ok, "client_id_present": bool(client_id), "client_secret_present": bool(client_secret), "timeout": timeout}
+    payload: Dict[str, Any] = {
+        "configured": ok,
+        "client_id_present": bool(client_id),
+        "client_secret_present": bool(client_secret),
+        "timeout": timeout,
+    }
     if ok and args.live_check:
         query = args.query or DEFAULT_TEST_QUERY
         try:
@@ -87,7 +106,11 @@ def cmd_check_credentials(args: argparse.Namespace) -> int:
         except Exception as exc:
             payload["live_check"] = {"query": query, "ok": False, "error": str(exc)}
             ok = False
-    print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else _render_check_credentials_text(payload))
+    print(
+        json.dumps(payload, ensure_ascii=False, indent=2)
+        if args.json
+        else _render_check_credentials_text(payload)
+    )
     return 0 if ok else 1
 
 

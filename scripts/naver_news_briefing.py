@@ -5,6 +5,7 @@
 이 모듈은 CLI 실행 경로(`python scripts/naver_news_briefing.py ...`)와
 기존 프로그래밍 진입점(`main`, `cmd_*`)을 그대로 유지하기 위한 facade다.
 """
+
 from __future__ import annotations
 
 from nb_cli import (

@@ -23,11 +23,15 @@ def cmd_brief_multi(args: argparse.Namespace) -> int:
         if not args.template and group.get("template"):
             template = group["template"]
         for query in group["queries"]:
-            entries.append(_run_query_entry(query, limit=args.limit, days=args.days, group=group))
+            entries.append(
+                _run_query_entry(query, limit=args.limit, days=args.days, group=group)
+            )
     for query in args.query or []:
         entries.append(_run_query_entry(query, limit=args.limit, days=args.days))
     if not entries:
-        raise ValueError("brief-multi에는 --query 또는 --group이 최소 1개 이상 필요합니다.")
+        raise ValueError(
+            "brief-multi에는 --query 또는 --group이 최소 1개 이상 필요합니다."
+        )
     payload = build_combined_payload(entries, template=template, source_groups=groups)
     if args.json:
         print(render_combined_json(payload))

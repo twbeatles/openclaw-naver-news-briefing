@@ -35,15 +35,22 @@ def _dpapi_encrypt_text(text: str) -> str:
     from ctypes import wintypes
 
     class DATA_BLOB(ctypes.Structure):
-        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_byte))]
+        _fields_ = [
+            ("cbData", wintypes.DWORD),
+            ("pbData", ctypes.POINTER(ctypes.c_byte)),
+        ]
 
     source = text.encode("utf-8")
     source_buffer = (ctypes.c_byte * len(source)).from_buffer_copy(source)
-    in_blob = DATA_BLOB(len(source), ctypes.cast(source_buffer, ctypes.POINTER(ctypes.c_byte)))
+    in_blob = DATA_BLOB(
+        len(source), ctypes.cast(source_buffer, ctypes.POINTER(ctypes.c_byte))
+    )
     out_blob = DATA_BLOB()
     crypt32 = ctypes.windll.crypt32
     kernel32 = ctypes.windll.kernel32
-    ok = crypt32.CryptProtectData(ctypes.byref(in_blob), None, None, None, None, 0, ctypes.byref(out_blob))
+    ok = crypt32.CryptProtectData(
+        ctypes.byref(in_blob), None, None, None, None, 0, ctypes.byref(out_blob)
+    )
     if not ok:
         return ""
     try:
@@ -62,14 +69,21 @@ def _dpapi_decrypt_text(payload: str) -> str:
     raw = base64.b64decode(payload)
 
     class DATA_BLOB(ctypes.Structure):
-        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_byte))]
+        _fields_ = [
+            ("cbData", wintypes.DWORD),
+            ("pbData", ctypes.POINTER(ctypes.c_byte)),
+        ]
 
     source_buffer = (ctypes.c_byte * len(raw)).from_buffer_copy(raw)
-    in_blob = DATA_BLOB(len(raw), ctypes.cast(source_buffer, ctypes.POINTER(ctypes.c_byte)))
+    in_blob = DATA_BLOB(
+        len(raw), ctypes.cast(source_buffer, ctypes.POINTER(ctypes.c_byte))
+    )
     out_blob = DATA_BLOB()
     crypt32 = ctypes.windll.crypt32
     kernel32 = ctypes.windll.kernel32
-    ok = crypt32.CryptUnprotectData(ctypes.byref(in_blob), None, None, None, None, 0, ctypes.byref(out_blob))
+    ok = crypt32.CryptUnprotectData(
+        ctypes.byref(in_blob), None, None, None, None, 0, ctypes.byref(out_blob)
+    )
     if not ok:
         return ""
     try:
@@ -82,12 +96,24 @@ def _dpapi_decrypt_text(payload: str) -> str:
 def encode_client_secret_for_storage(client_secret: str) -> Dict[str, str]:
     plain = str(client_secret or "").strip()
     if not plain:
-        return {"client_secret": "", "client_secret_enc": "", "client_secret_storage": "plain"}
+        return {
+            "client_secret": "",
+            "client_secret_enc": "",
+            "client_secret_storage": "plain",
+        }
     if _is_windows_platform():
         encrypted = _dpapi_encrypt_text(plain)
         if encrypted:
-            return {"client_secret": "", "client_secret_enc": encrypted, "client_secret_storage": "dpapi"}
-    return {"client_secret": plain, "client_secret_enc": "", "client_secret_storage": "plain"}
+            return {
+                "client_secret": "",
+                "client_secret_enc": encrypted,
+                "client_secret_storage": "dpapi",
+            }
+    return {
+        "client_secret": plain,
+        "client_secret_enc": "",
+        "client_secret_storage": "plain",
+    }
 
 
 def resolve_client_secret_for_runtime(settings: Mapping[str, Any]) -> Tuple[str, bool]:
@@ -133,10 +159,14 @@ def load_config() -> Dict[str, Any]:
 
 def save_config(config: Dict[str, Any]) -> None:
     ensure_data_dir()
-    _write_text_atomic(str(CONFIG_PATH), json.dumps(config, indent=2, ensure_ascii=False))
+    _write_text_atomic(
+        str(CONFIG_PATH), json.dumps(config, indent=2, ensure_ascii=False)
+    )
 
 
-def set_credentials(client_id: str, client_secret: str, timeout: int = 15) -> Dict[str, Any]:
+def set_credentials(
+    client_id: str, client_secret: str, timeout: int = 15
+) -> Dict[str, Any]:
     config = load_config()
     encoded = encode_client_secret_for_storage(client_secret)
     config["naver_api"].update(
@@ -157,10 +187,19 @@ def get_runtime_credentials() -> Tuple[str, str, int, Dict[str, Any]]:
     settings = config["naver_api"]
     client_secret, needs_migration = resolve_client_secret_for_runtime(settings)
     if needs_migration and client_secret:
-        updated = set_credentials(str(settings.get("client_id", "")), client_secret, int(settings.get("timeout", 15)))
+        updated = set_credentials(
+            str(settings.get("client_id", "")),
+            client_secret,
+            int(settings.get("timeout", 15)),
+        )
         settings = updated["naver_api"]
         client_secret, _ = resolve_client_secret_for_runtime(settings)
-    return str(settings.get("client_id", "")).strip(), client_secret.strip(), int(settings.get("timeout", 15)), config
+    return (
+        str(settings.get("client_id", "")).strip(),
+        client_secret.strip(),
+        int(settings.get("timeout", 15)),
+        config,
+    )
 
 
 __all__ = [

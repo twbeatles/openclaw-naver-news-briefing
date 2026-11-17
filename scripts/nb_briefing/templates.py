@@ -16,7 +16,12 @@ def supported_templates() -> List[str]:
     return list(TEMPLATES.keys())
 
 
-def build_combined_payload(entries: List[Dict[str, Any]], *, template: str, source_groups: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
+def build_combined_payload(
+    entries: List[Dict[str, Any]],
+    *,
+    template: str,
+    source_groups: List[Dict[str, Any]] | None = None,
+) -> Dict[str, Any]:
     publishers = Counter()
     total_items = 0
     total_filtered = 0
@@ -30,7 +35,9 @@ def build_combined_payload(entries: List[Dict[str, Any]], *, template: str, sour
             publisher = str(item.get("publisher", "") or "").strip()
             if publisher:
                 publishers[publisher] += 1
-    top_publishers = [{"publisher": name, "count": count} for name, count in publishers.most_common(5)]
+    top_publishers = [
+        {"publisher": name, "count": count} for name, count in publishers.most_common(5)
+    ]
     return {
         "template": template,
         "entry_count": len(entries),
@@ -45,7 +52,9 @@ def build_combined_payload(entries: List[Dict[str, Any]], *, template: str, sour
 
 def _header(payload: Dict[str, Any]) -> List[str]:
     lines = [f"네이버 뉴스 멀티 브리핑 · {payload['template']}"]
-    lines.append(f"- 쿼리 수: {payload['entry_count']} / 기사 수: {payload['item_count']}")
+    lines.append(
+        f"- 쿼리 수: {payload['entry_count']} / 기사 수: {payload['item_count']}"
+    )
     if payload.get("filtered_out"):
         lines.append(f"- 제외어 필터링: {payload['filtered_out']}건")
     if payload.get("too_old"):
@@ -55,7 +64,12 @@ def _header(payload: Dict[str, Any]) -> List[str]:
         lines.append(f"- 그룹: {group_names}")
     top_publishers = payload.get("top_publishers") or []
     if top_publishers:
-        lines.append("- 많이 보인 출처: " + ", ".join(f"{item['publisher']} {item['count']}건" for item in top_publishers[:3]))
+        lines.append(
+            "- 많이 보인 출처: "
+            + ", ".join(
+                f"{item['publisher']} {item['count']}건" for item in top_publishers[:3]
+            )
+        )
     return lines
 
 
@@ -98,7 +112,9 @@ def render_combined_text(payload: Dict[str, Any]) -> str:
         for entry in payload["entries"]:
             result = entry["result"]
             lines.append(f"## {_entry_title(entry)}")
-            lines.append(f"- 노출 기사: {result.get('displayed', 0)} / 전체 결과: {result.get('total', 0)}")
+            lines.append(
+                f"- 노출 기사: {result.get('displayed', 0)} / 전체 결과: {result.get('total', 0)}"
+            )
             if entry.get("context"):
                 lines.append(f"- 맥락: {entry['context']}")
             lines.extend(_entry_items(entry, limit=3))
@@ -107,7 +123,11 @@ def render_combined_text(payload: Dict[str, Any]) -> str:
         lines.append("오늘 체크할 흐름")
         for entry in payload["entries"]:
             result = entry["result"]
-            headline = result.get("items", [{}])[0].get("title") if result.get("items") else "기사 없음"
+            headline = (
+                result.get("items", [{}])[0].get("title")
+                if result.get("items")
+                else "기사 없음"
+            )
             lines.append(f"- {_entry_title(entry)}: {headline}")
         lines.append("")
         lines.append("세부 기사")
@@ -116,7 +136,9 @@ def render_combined_text(payload: Dict[str, Any]) -> str:
             lines.extend(_entry_items(entry, limit=2))
             lines.append("")
     elif template == "watch-alert":
-        alert_entries = [entry for entry in payload["entries"] if entry["result"].get("displayed", 0)]
+        alert_entries = [
+            entry for entry in payload["entries"] if entry["result"].get("displayed", 0)
+        ]
         if not alert_entries:
             lines.append("- 신규/표시 가능한 기사가 없습니다.")
         for entry in alert_entries:

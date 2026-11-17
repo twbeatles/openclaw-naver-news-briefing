@@ -26,16 +26,26 @@ def build_commands(plan: AutomationPlan) -> List[str]:
         commands.append(
             f'python scripts/naver_news_briefing.py group-add {plan.name_hint} {quoted_queries} --label "자동 생성 그룹" --context "{plan.raw_request}" --template {plan.template}'
         )
-        commands.append(f"python scripts/naver_news_briefing.py brief-multi --group {plan.name_hint} --template {plan.template}")
-        commands.append(f'python scripts/naver_news_briefing.py plan-save "{plan.raw_request}" --as group --name {plan.name_hint}')
+        commands.append(
+            f"python scripts/naver_news_briefing.py brief-multi --group {plan.name_hint} --template {plan.template}"
+        )
+        commands.append(
+            f'python scripts/naver_news_briefing.py plan-save "{plan.raw_request}" --as group --name {plan.name_hint}'
+        )
     else:
         query = plan.primary_query or ""
         if "monitor" in plan.action:
-            commands.append(f'python scripts/naver_news_briefing.py watch-add {plan.name_hint} "{query}" --template {plan.template}')
-            commands.append(f"python scripts/naver_news_briefing.py watch-check {plan.name_hint} --json")
+            commands.append(
+                f'python scripts/naver_news_briefing.py watch-add {plan.name_hint} "{query}" --template {plan.template}'
+            )
+            commands.append(
+                f"python scripts/naver_news_briefing.py watch-check {plan.name_hint} --json"
+            )
         if "briefing" in plan.action:
             commands.append(f'python scripts/naver_news_briefing.py search "{query}"')
-        commands.append(f'python scripts/naver_news_briefing.py plan-save "{plan.raw_request}" --as watch --name {plan.name_hint}')
+        commands.append(
+            f'python scripts/naver_news_briefing.py plan-save "{plan.raw_request}" --as watch --name {plan.name_hint}'
+        )
     return commands
 
 
@@ -46,7 +56,11 @@ def build_operator_hints(plan: AutomationPlan) -> OperatorHints:
         recommended_command = f"python scripts/naver_news_briefing.py brief-multi --group {plan.name_hint} --template {plan.template}"
         delivery_format = "chat-briefing"
     else:
-        recommended_command = f"python scripts/naver_news_briefing.py watch-check {plan.name_hint} --json" if "monitor" in plan.action else f'python scripts/naver_news_briefing.py search "{plan.primary_query or ""}"'
+        recommended_command = (
+            f"python scripts/naver_news_briefing.py watch-check {plan.name_hint} --json"
+            if "monitor" in plan.action
+            else f'python scripts/naver_news_briefing.py search "{plan.primary_query or ""}"'
+        )
         delivery_format = "watch-json" if "monitor" in plan.action else "chat-briefing"
     notes = [
         "스케줄 실행은 이 스킬이 아니라 외부 cron/작업 스케줄러/OpenClaw cron에서 연결하는 방식이 가장 안정적입니다.",
@@ -54,8 +68,10 @@ def build_operator_hints(plan: AutomationPlan) -> OperatorHints:
     ]
     cron_examples: List[str] = []
     if plan.schedule.cron:
-        cron_examples.append(f'{plan.schedule.cron} {recommended_command}')
-        cron_examples.append(f'{plan.schedule.cron} # 위 명령 실행 후 stdout/json을 텔레그램·디스코드 전송')
+        cron_examples.append(f"{plan.schedule.cron} {recommended_command}")
+        cron_examples.append(
+            f"{plan.schedule.cron} # 위 명령 실행 후 stdout/json을 텔레그램·디스코드 전송"
+        )
     return OperatorHints(
         recommended_runner=recommended_runner,
         recommended_command=recommended_command,
@@ -72,7 +88,11 @@ def parse_automation_request(raw: str) -> AutomationPlan:
     action = detect_action(request)
     schedule = detect_schedule(request)
     queries = extract_queries(request)
-    query_mode = "group" if len(queries) > 1 or any(hint in request for hint in GROUP_HINTS) else "single"
+    query_mode = (
+        "group"
+        if len(queries) > 1 or any(hint in request for hint in GROUP_HINTS)
+        else "single"
+    )
     primary_query = queries[0] if queries else None
     intent = None
     rationale: List[str] = []
@@ -81,9 +101,13 @@ def parse_automation_request(raw: str) -> AutomationPlan:
         intent = asdict(built)
         rationale.append(f"핵심 검색어를 '{built.search_query}'로 정규화했습니다.")
         if built.exclude_words:
-            rationale.append("제외어를 유지해 watch/search 명령으로 바로 연결할 수 있게 했습니다.")
+            rationale.append(
+                "제외어를 유지해 watch/search 명령으로 바로 연결할 수 있게 했습니다."
+            )
     else:
-        rationale.append("주제 키워드가 없어 저장 가능한 watch/search 명령은 만들지 않았습니다.")
+        rationale.append(
+            "주제 키워드가 없어 저장 가능한 watch/search 명령은 만들지 않았습니다."
+        )
     if schedule.kind != "manual":
         rationale.append(f"일정 표현을 '{schedule.label}' 구조로 해석했습니다.")
     group_reason = None
@@ -117,11 +141,23 @@ def parse_automation_request(raw: str) -> AutomationPlan:
     )
     commands = build_commands(plan)
     hints = build_operator_hints(plan)
-    return AutomationPlan(**{**asdict(plan), "suggested_commands": commands, "operator_hints": hints, "schedule": plan.schedule})
+    return AutomationPlan(
+        **{
+            **asdict(plan),
+            "suggested_commands": commands,
+            "operator_hints": hints,
+            "schedule": plan.schedule,
+        }
+    )
 
 
 def render_plan_text(plan: AutomationPlan) -> str:
-    lines = ["## 뉴스 자동화 계획", f"- 요청: {plan.raw_request}", f"- 작업 유형: {plan.action}", f"- 일정: {plan.schedule.label}"]
+    lines = [
+        "## 뉴스 자동화 계획",
+        f"- 요청: {plan.raw_request}",
+        f"- 작업 유형: {plan.action}",
+        f"- 일정: {plan.schedule.label}",
+    ]
     if plan.queries:
         lines.append("- 해석된 질의: " + ", ".join(plan.queries))
     lines.append(f"- 저장 대상 추천: {plan.operator_hints.storage_target}")

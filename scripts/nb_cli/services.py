@@ -37,13 +37,25 @@ def run_search(query: str, *, limit: int, days: int | None) -> Dict[str, Any]:
         days=intent.days,
         timeout=timeout,
     )
-    result["intent"] = {"db_keyword": intent.db_keyword, "fetch_key": intent.fetch_key, "raw_query": intent.raw_query}
+    result["intent"] = {
+        "db_keyword": intent.db_keyword,
+        "fetch_key": intent.fetch_key,
+        "raw_query": intent.raw_query,
+    }
     return result
 
 
 def _run_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
     client_id, client_secret, timeout, _ = get_runtime_credentials()
-    result = fetch_news(client_id=client_id, client_secret=client_secret, search_query=rule["search_query"], exclude_words=rule["exclude_words"], limit=rule["limit"], days=rule.get("days"), timeout=timeout)
+    result = fetch_news(
+        client_id=client_id,
+        client_secret=client_secret,
+        search_query=rule["search_query"],
+        exclude_words=rule["exclude_words"],
+        limit=rule["limit"],
+        days=rule.get("days"),
+        timeout=timeout,
+    )
     new_items = mark_seen(rule["id"], result["items"])
     return {
         "rule": rule,
@@ -60,11 +72,31 @@ def _run_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _run_query_entry(query: str, *, limit: int, days: int | None, group: Dict[str, Any] | None = None, label: str | None = None, context: str | None = None) -> Dict[str, Any]:
+def _run_query_entry(
+    query: str,
+    *,
+    limit: int,
+    days: int | None,
+    group: Dict[str, Any] | None = None,
+    label: str | None = None,
+    context: str | None = None,
+) -> Dict[str, Any]:
     intent = build_intent(query, limit=limit, days=days)
     client_id, client_secret, timeout, _ = get_runtime_credentials()
-    result = fetch_news(client_id=client_id, client_secret=client_secret, search_query=intent.search_query, exclude_words=intent.exclude_words, limit=intent.limit, days=intent.days, timeout=timeout)
-    result["intent"] = {"db_keyword": intent.db_keyword, "fetch_key": intent.fetch_key, "raw_query": intent.raw_query}
+    result = fetch_news(
+        client_id=client_id,
+        client_secret=client_secret,
+        search_query=intent.search_query,
+        exclude_words=intent.exclude_words,
+        limit=intent.limit,
+        days=intent.days,
+        timeout=timeout,
+    )
+    result["intent"] = {
+        "db_keyword": intent.db_keyword,
+        "fetch_key": intent.fetch_key,
+        "raw_query": intent.raw_query,
+    }
     return {
         "query": query,
         "search_query": intent.search_query,

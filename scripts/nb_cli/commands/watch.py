@@ -90,7 +90,11 @@ def cmd_watch_check(args: argparse.Namespace) -> int:
             title = _strip_html(item.get("title", "제목 없음"))
             publisher = item.get("publisher") or "정보 없음"
             pub_iso = item.get("pub_date_iso")
-            pub_text = pub_iso.replace("T", " ")[:16] if pub_iso else item.get("pub_date", "시간 없음")
+            pub_text = (
+                pub_iso.replace("T", " ")[:16]
+                if pub_iso
+                else item.get("pub_date", "시간 없음")
+            )
             link = item.get("link") or item.get("original_link") or ""
             lines.append(f"- {title} / {publisher} / {pub_text} / {link}")
         extra_count = max(0, new_count - len(preview_items))
@@ -102,19 +106,30 @@ def cmd_watch_check(args: argparse.Namespace) -> int:
     for entry in payload:
         rule = entry["rule"]
         lines.extend(_format_watch_status_lines(entry))
-        lines.extend(_brief_lines({
-            "query": rule["search_query"],
-            "exclude_words": rule["exclude_words"],
-            "days": rule.get("days"),
-            "total": entry["summary"]["total"],
-            "displayed": len(entry["new_items"]),
-            "filtered_out": entry["summary"]["filtered_out"],
-            "too_old": entry["summary"]["too_old"],
-            "items": entry["new_items"],
-        }, title=f"watch: {rule['name']} 신규 기사 요약"))
+        lines.extend(
+            _brief_lines(
+                {
+                    "query": rule["search_query"],
+                    "exclude_words": rule["exclude_words"],
+                    "days": rule.get("days"),
+                    "total": entry["summary"]["total"],
+                    "displayed": len(entry["new_items"]),
+                    "filtered_out": entry["summary"]["filtered_out"],
+                    "too_old": entry["summary"]["too_old"],
+                    "items": entry["new_items"],
+                },
+                title=f"watch: {rule['name']} 신규 기사 요약",
+            )
+        )
         lines.append("")
     print("\n".join(lines).strip())
     return 0
 
 
-__all__ = ["ANNOUNCE_PREVIEW_LIMIT", "cmd_watch_add", "cmd_watch_check", "cmd_watch_list", "cmd_watch_remove"]
+__all__ = [
+    "ANNOUNCE_PREVIEW_LIMIT",
+    "cmd_watch_add",
+    "cmd_watch_check",
+    "cmd_watch_list",
+    "cmd_watch_remove",
+]

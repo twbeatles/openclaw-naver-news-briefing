@@ -244,10 +244,17 @@ def clean_natural_query(raw: str) -> str:
     for token in _REQUEST_PHRASES:
         stripped = stripped.replace(token, " ")
 
-    stripped = re.sub(r"\b(today|latest|recent|this week|last week)\b", " ", stripped, flags=re.IGNORECASE)
+    stripped = re.sub(
+        r"\b(today|latest|recent|this week|last week)\b",
+        " ",
+        stripped,
+        flags=re.IGNORECASE,
+    )
     stripped = re.sub(r"최근\s*\d+\s*(?:일|주|개월|달)", " ", stripped)
     stripped = re.sub(r"\d+\s*(?:일|주|개월|달)\s*(?:내|이내)", " ", stripped)
-    stripped = re.sub(r"(?:일주일|한\s*주|한\s*달|한달|보름|이번\s*주|지난\s*주)", " ", stripped)
+    stripped = re.sub(
+        r"(?:일주일|한\s*주|한\s*달|한달|보름|이번\s*주|지난\s*주)", " ", stripped
+    )
     stripped = re.sub(r"\b\d+\b", " ", stripped)
     stripped = _normalize_spacing(stripped)
 

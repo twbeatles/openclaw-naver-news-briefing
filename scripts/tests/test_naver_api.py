@@ -81,16 +81,27 @@ def test_api_url_is_naver_api_hub():
 def test_auth_headers_use_gateway_names():
     headers = naver_auth_headers("  my-id  ", "  my-secret  ")
     assert headers == {API_KEY_ID_HEADER: "my-id", API_KEY_HEADER: "my-secret"}
-    assert headers == {"X-NCP-APIGW-API-KEY-ID": "my-id", "X-NCP-APIGW-API-KEY": "my-secret"}
+    assert headers == {
+        "X-NCP-APIGW-API-KEY-ID": "my-id",
+        "X-NCP-APIGW-API-KEY": "my-secret",
+    }
     assert "X-Naver-Client-Id" not in headers
     assert "X-Naver-Client-Secret" not in headers
 
 
 def test_parse_flat_and_nested_errors():
-    code, message = parse_naver_api_error({"errorCode": "SE02", "errorMessage": "Invalid display value"})
+    code, message = parse_naver_api_error(
+        {"errorCode": "SE02", "errorMessage": "Invalid display value"}
+    )
     assert (code, message) == ("SE02", "Invalid display value")
     code, message = parse_naver_api_error(
-        {"error": {"errorCode": "200", "message": "Authentication Failed", "details": "missing"}}
+        {
+            "error": {
+                "errorCode": "200",
+                "message": "Authentication Failed",
+                "details": "missing",
+            }
+        }
     )
     assert code == "200"
     assert "Authentication Failed" in message and "missing" in message
@@ -125,7 +136,9 @@ def test_fetch_news_uses_hub_url_and_headers():
         session=session,
     )
     assert len(session.calls) == 1
-    assert session.calls[0]["url"] == "https://naverapihub.apigw.ntruss.com/search/v1/news"
+    assert (
+        session.calls[0]["url"] == "https://naverapihub.apigw.ntruss.com/search/v1/news"
+    )
     assert session.calls[0]["headers"] == {
         "X-NCP-APIGW-API-KEY-ID": "id",
         "X-NCP-APIGW-API-KEY": "secret",
@@ -140,7 +153,9 @@ class FlakySession:
     def get(self, url, *, headers, params, timeout):
         self.attempts += 1
         if self.attempts == 1:
-            return DummyResponse(500, {"errorCode": "SE99", "errorMessage": "일시 오류"})
+            return DummyResponse(
+                500, {"errorCode": "SE99", "errorMessage": "일시 오류"}
+            )
         return DummyResponse(200, self.payload)
 
 

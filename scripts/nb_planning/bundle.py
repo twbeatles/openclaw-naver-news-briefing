@@ -12,7 +12,12 @@ def _default_skill_dir() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def build_integration_bundle(raw: str, *, skill_dir: str | Path | None = None, assistant_channel: str = "telegram") -> Dict[str, Any]:
+def build_integration_bundle(
+    raw: str,
+    *,
+    skill_dir: str | Path | None = None,
+    assistant_channel: str = "telegram",
+) -> Dict[str, Any]:
     plan = parse_automation_request(raw)
     skill_root = Path(skill_dir).resolve() if skill_dir else _default_skill_dir()
     cli_rel = str(skill_root / "scripts" / "naver_news_briefing.py")
@@ -30,7 +35,11 @@ def build_integration_bundle(raw: str, *, skill_dir: str | Path | None = None, a
         "days_of_week": plan.schedule.days_of_week,
     }
     confirmation = f"'{plan.raw_request}' 요청을 {plan.schedule.label} {plan.operator_hints.storage_target} 자동화로 해석했습니다. 저장 이름은 '{plan.name_hint}'를 추천하고, 저장 뒤에는 '{run_command}'를 스케줄러에 연결하면 됩니다."
-    cadence_phrase = plan.schedule.label if plan.schedule.label.endswith("마다") else f"{plan.schedule.label}마다"
+    cadence_phrase = (
+        plan.schedule.label
+        if plan.schedule.label.endswith("마다")
+        else f"{plan.schedule.label}마다"
+    )
     system_event_text = (
         f"{cadence_phrase} {assistant_channel} 채널에 네이버 뉴스 자동화를 실행하세요. "
         f"먼저 {save_command} 로 상태를 저장하고, 이후 {run_command} 결과를 전달합니다."
@@ -62,7 +71,9 @@ def build_integration_bundle(raw: str, *, skill_dir: str | Path | None = None, a
         },
         "automation": {
             "schedule": schedule_payload,
-            "cron_line": f"{plan.schedule.cron} {shell_run}" if plan.schedule.cron else None,
+            "cron_line": f"{plan.schedule.cron} {shell_run}"
+            if plan.schedule.cron
+            else None,
             "system_event_text": system_event_text,
             "openclaw_prompt": openclaw_prompt,
         },

@@ -19,7 +19,9 @@ class QueryIntent:
     limit: int
 
 
-def build_intent(raw_query: str, *, limit: int = 10, days: int | None = None) -> QueryIntent:
+def build_intent(
+    raw_query: str, *, limit: int = 10, days: int | None = None
+) -> QueryIntent:
     cleaned = clean_natural_query(raw_query)
     detected_days = days if days is not None else detect_recent_days(raw_query)
     search_query, exclude_words = parse_search_query(cleaned)

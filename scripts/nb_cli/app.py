@@ -38,8 +38,12 @@ def _format_exception_message(exc: Exception) -> str:
     if MISSING_CREDENTIALS_ERROR in message:
         return _render_missing_credentials_guidance()
     if "keyword group not found:" in message:
-        missing_name = message.split("keyword group not found:", 1)[1].strip().strip("'")
-        available = [str(group.get("name")) for group in list_groups() if group.get("name")]
+        missing_name = (
+            message.split("keyword group not found:", 1)[1].strip().strip("'")
+        )
+        available = [
+            str(group.get("name")) for group in list_groups() if group.get("name")
+        ]
         return _format_missing_named_resource("키워드 그룹", missing_name, available)
     if "watch rule not found:" in message:
         missing_name = message.split("watch rule not found:", 1)[1].strip().strip("'")
@@ -56,14 +60,22 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--client-id")
     p.add_argument("--client-secret")
     p.add_argument("--timeout", type=int, default=15)
-    p.add_argument("--live-check", action="store_true", help="저장 직후 실제 API 호출로 자격증명을 확인")
-    p.add_argument("--test-search", help="저장 직후 테스트할 검색어 (설정 시 라이브 체크 수행)")
+    p.add_argument(
+        "--live-check",
+        action="store_true",
+        help="저장 직후 실제 API 호출로 자격증명을 확인",
+    )
+    p.add_argument(
+        "--test-search", help="저장 직후 테스트할 검색어 (설정 시 라이브 체크 수행)"
+    )
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_setup)
 
     p = sub.add_parser("check-credentials", help="자격증명 상태 확인")
     p.add_argument("--json", action="store_true")
-    p.add_argument("--live-check", action="store_true", help="실제 API 호출까지 포함해 확인")
+    p.add_argument(
+        "--live-check", action="store_true", help="실제 API 호출까지 포함해 확인"
+    )
     p.add_argument("--query", help="라이브 체크용 검색어")
     p.set_defaults(func=cmd_check_credentials)
 
@@ -97,7 +109,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("watch-check", help="watch rule 신규 기사 체크")
     p.add_argument("name_or_id", nargs="?")
     p.add_argument("--json", action="store_true")
-    p.add_argument("--announce-text", action="store_true", help="cron/announce friendly plain text output")
+    p.add_argument(
+        "--announce-text",
+        action="store_true",
+        help="cron/announce friendly plain text output",
+    )
     p.set_defaults(func=cmd_watch_check)
 
     p = sub.add_parser("group-add", help="키워드 그룹 추가")
@@ -146,7 +162,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_plan)
 
-    p = sub.add_parser("integration-plan", help="자연어 요청을 OpenClaw/cron 연동 번들로 변환")
+    p = sub.add_parser(
+        "integration-plan", help="자연어 요청을 OpenClaw/cron 연동 번들로 변환"
+    )
     p.add_argument("request")
     p.add_argument("--channel", default="telegram")
     p.add_argument("--skill-dir")
@@ -154,7 +172,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_integration_plan)
 
-    p = sub.add_parser("plan-save", help="자연어 요청을 해석해 watch/group 설정으로 저장")
+    p = sub.add_parser(
+        "plan-save", help="자연어 요청을 해석해 watch/group 설정으로 저장"
+    )
     p.add_argument("request")
     p.add_argument("--name")
     p.add_argument("--as", dest="as_type", choices=["watch", "group"])

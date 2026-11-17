@@ -26,7 +26,9 @@ def test_parse_monitoring_interval_plan():
 
 
 def test_parse_daily_briefing_group_plan():
-    plan = parse_automation_request("매일 아침 7시에 반도체, AI 데이터센터 뉴스 브리핑해줘")
+    plan = parse_automation_request(
+        "매일 아침 7시에 반도체, AI 데이터센터 뉴스 브리핑해줘"
+    )
     assert plan.action == "briefing"
     assert plan.query_mode == "group"
     assert plan.schedule.kind == "daily"
@@ -55,8 +57,25 @@ def test_cmd_plan_json(capsys):
 
 
 def test_cmd_plan_save_creates_watch(monkeypatch, capsys):
-    monkeypatch.setattr(planning_cmd, "add_rule", lambda **kwargs: {"name": kwargs["name"], "search_query": kwargs["search_query"], "template": kwargs["template"], "tags": kwargs["tags"], "schedule": kwargs["schedule"]})
-    args = DummyArgs(request="반도체 뉴스 1시간마다 모니터링해줘", name="semi-hourly", as_type="watch", label=None, tag=None, json=True)
+    monkeypatch.setattr(
+        planning_cmd,
+        "add_rule",
+        lambda **kwargs: {
+            "name": kwargs["name"],
+            "search_query": kwargs["search_query"],
+            "template": kwargs["template"],
+            "tags": kwargs["tags"],
+            "schedule": kwargs["schedule"],
+        },
+    )
+    args = DummyArgs(
+        request="반도체 뉴스 1시간마다 모니터링해줘",
+        name="semi-hourly",
+        as_type="watch",
+        label=None,
+        tag=None,
+        json=True,
+    )
     assert cli.cmd_plan_save(args) == 0
     payload = json.loads(capsys.readouterr().out)
     value = payload["created"][0]["value"]
@@ -116,12 +135,32 @@ def test_cmd_integration_plan_creates_output_parent_dirs(tmp_path, capsys):
     assert cli.cmd_integration_plan(args) == 0
     payload = json.loads(capsys.readouterr().out)
     assert output_path.exists()
-    assert json.loads(output_path.read_text(encoding="utf-8"))["storage"]["target"] == payload["storage"]["target"]
+    assert (
+        json.loads(output_path.read_text(encoding="utf-8"))["storage"]["target"]
+        == payload["storage"]["target"]
+    )
 
 
 def test_cmd_plan_save_creates_group(monkeypatch, capsys):
-    monkeypatch.setattr(planning_cmd, "create_group", lambda **kwargs: {"name": kwargs["name"], "queries": kwargs["queries"], "template": kwargs["template"], "schedule": kwargs["schedule"], "operator_hints": kwargs["operator_hints"]})
-    args = DummyArgs(request="반도체, AI 데이터센터 뉴스 매일 아침 7시에 브리핑해줘", name="morning-tech", as_type="group", label="아침 브리핑", tag=["테크"], json=True)
+    monkeypatch.setattr(
+        planning_cmd,
+        "create_group",
+        lambda **kwargs: {
+            "name": kwargs["name"],
+            "queries": kwargs["queries"],
+            "template": kwargs["template"],
+            "schedule": kwargs["schedule"],
+            "operator_hints": kwargs["operator_hints"],
+        },
+    )
+    args = DummyArgs(
+        request="반도체, AI 데이터센터 뉴스 매일 아침 7시에 브리핑해줘",
+        name="morning-tech",
+        as_type="group",
+        label="아침 브리핑",
+        tag=["테크"],
+        json=True,
+    )
     assert cli.cmd_plan_save(args) == 0
     payload = json.loads(capsys.readouterr().out)
     value = payload["created"][0]["value"]
@@ -134,7 +173,11 @@ def test_cmd_plan_save_creates_group(monkeypatch, capsys):
 
 
 def test_cmd_plan_save_dedupes_tags(monkeypatch, capsys):
-    monkeypatch.setattr(planning_cmd, "add_rule", lambda **kwargs: {"name": kwargs["name"], "tags": kwargs["tags"]})
+    monkeypatch.setattr(
+        planning_cmd,
+        "add_rule",
+        lambda **kwargs: {"name": kwargs["name"], "tags": kwargs["tags"]},
+    )
     args = DummyArgs(
         request="반도체 뉴스 1시간마다 모니터링해줘",
         name="semi-hourly",
@@ -166,8 +209,18 @@ def test_cmd_plan_save_rejects_group_plan_as_watch():
 
 
 def test_main_reports_missing_group_with_available_names(monkeypatch, capsys):
-    monkeypatch.setattr(groups_cmd, "get_group", lambda name: (_ for _ in ()).throw(KeyError(f"keyword group not found: {name}")))
-    monkeypatch.setattr(cli_app, "list_groups", lambda: [{"name": "market-watch"}, {"name": "morning-tech"}])
+    monkeypatch.setattr(
+        groups_cmd,
+        "get_group",
+        lambda name: (_ for _ in ()).throw(
+            KeyError(f"keyword group not found: {name}")
+        ),
+    )
+    monkeypatch.setattr(
+        cli_app,
+        "list_groups",
+        lambda: [{"name": "market-watch"}, {"name": "morning-tech"}],
+    )
     exit_code = cli.main(["group-list", "missing-group"])
     captured = capsys.readouterr()
     assert exit_code == 1
@@ -176,7 +229,11 @@ def test_main_reports_missing_group_with_available_names(monkeypatch, capsys):
 
 
 def test_main_reports_missing_watch_rule_with_hint(monkeypatch, capsys):
-    monkeypatch.setattr(watch_cmd, "get_rule", lambda name: (_ for _ in ()).throw(KeyError(f"watch rule not found: {name}")))
+    monkeypatch.setattr(
+        watch_cmd,
+        "get_rule",
+        lambda name: (_ for _ in ()).throw(KeyError(f"watch rule not found: {name}")),
+    )
     monkeypatch.setattr(cli_app, "list_rules", lambda: [{"name": "semi-hourly"}])
     exit_code = cli.main(["watch-check", "unknown-watch"])
     captured = capsys.readouterr()

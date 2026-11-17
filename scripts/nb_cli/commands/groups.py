@@ -15,7 +15,14 @@ from nb_cli.rendering import _format_group_text, _print_payload
 
 
 def cmd_group_add(args: argparse.Namespace) -> int:
-    group = create_group(name=args.name, queries=args.query, label=args.label, tags=args.tag, context=args.context, template=args.template)
+    group = create_group(
+        name=args.name,
+        queries=args.query,
+        label=args.label,
+        tags=args.tag,
+        context=args.context,
+        template=args.template,
+    )
     _print_payload(group, as_json=args.json, render_text=_format_group_text)
     return 0
 
@@ -23,7 +30,13 @@ def cmd_group_add(args: argparse.Namespace) -> int:
 def cmd_group_list(args: argparse.Namespace) -> int:
     groups = [get_group(args.name_or_id)] if args.name_or_id else list_groups()
     if args.json:
-        print(json.dumps(groups if not args.name_or_id else groups[0], ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                groups if not args.name_or_id else groups[0],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
     if not groups:
         print("등록된 키워드 그룹이 없습니다.")
@@ -45,7 +58,16 @@ def cmd_group_update(args: argparse.Namespace) -> int:
     tags = None
     if args.tag is not None or args.clear_tags:
         tags = [] if args.clear_tags else args.tag
-    group = update_group(args.name_or_id, label=args.label, context=args.context, tags=tags, template=args.template, replace_queries=args.set_query, add_queries=args.add_query, remove_queries=args.remove_query)
+    group = update_group(
+        args.name_or_id,
+        label=args.label,
+        context=args.context,
+        tags=tags,
+        template=args.template,
+        replace_queries=args.set_query,
+        add_queries=args.add_query,
+        remove_queries=args.remove_query,
+    )
     _print_payload(group, as_json=args.json, render_text=_format_group_text)
     return 0
 

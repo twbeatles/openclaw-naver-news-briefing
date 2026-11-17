@@ -25,8 +25,24 @@ def test_watch_store_add_list_seen_remove(tmp_path, monkeypatch):
     assert rule["schedule"]["interval_minutes"] == 60
     assert get_rule("semiconductor")["label"] == "반도체 감시"
     assert len(list_rules()) == 1
-    first = mark_seen(rule["id"], [{"link": "https://example.com/a", "pub_date_iso": "2026-03-25T10:00:00+09:00"}])
-    second = mark_seen(rule["id"], [{"link": "https://example.com/a", "pub_date_iso": "2026-03-25T10:00:00+09:00"}])
+    first = mark_seen(
+        rule["id"],
+        [
+            {
+                "link": "https://example.com/a",
+                "pub_date_iso": "2026-03-25T10:00:00+09:00",
+            }
+        ],
+    )
+    second = mark_seen(
+        rule["id"],
+        [
+            {
+                "link": "https://example.com/a",
+                "pub_date_iso": "2026-03-25T10:00:00+09:00",
+            }
+        ],
+    )
     assert len(first) == 1
     assert len(second) == 0
     assert remove_rule("semiconductor") == 1

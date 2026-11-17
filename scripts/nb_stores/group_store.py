@@ -49,7 +49,9 @@ def connect() -> Iterator[sqlite3.Connection]:
         yield conn
 
 
-def _serialize_group_row(row: sqlite3.Row | tuple[Any, ...], queries: List[str]) -> Dict[str, Any]:
+def _serialize_group_row(
+    row: sqlite3.Row | tuple[Any, ...], queries: List[str]
+) -> Dict[str, Any]:
     return {
         "id": row[0],
         "name": row[1],
@@ -67,13 +69,18 @@ def _serialize_group_row(row: sqlite3.Row | tuple[Any, ...], queries: List[str])
 
 
 def _fetch_queries(conn: sqlite3.Connection, group_id: int) -> List[str]:
-    rows = conn.execute("SELECT raw_query FROM group_queries WHERE group_id = ? ORDER BY position, id", (group_id,)).fetchall()
+    rows = conn.execute(
+        "SELECT raw_query FROM group_queries WHERE group_id = ? ORDER BY position, id",
+        (group_id,),
+    ).fetchall()
     return [row[0] for row in rows]
 
 
 def list_groups() -> List[Dict[str, Any]]:
     with connect() as conn:
-        rows = conn.execute("SELECT id, name, label, tags_json, context, template, schedule_json, operator_hint_json, created_at, updated_at FROM keyword_groups ORDER BY name").fetchall()
+        rows = conn.execute(
+            "SELECT id, name, label, tags_json, context, template, schedule_json, operator_hint_json, created_at, updated_at FROM keyword_groups ORDER BY name"
+        ).fetchall()
         return [_serialize_group_row(row, _fetch_queries(conn, row[0])) for row in rows]
 
 
@@ -89,8 +96,20 @@ def get_group(name_or_id: str | int) -> Dict[str, Any]:
         return _serialize_group_row(row, _fetch_queries(conn, row[0]))
 
 
-def create_group(*, name: str, queries: List[str], label: str | None = None, tags: Iterable[str] | None = None, context: str | None = None, template: str | None = None, schedule: Dict[str, Any] | None = None, operator_hints: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    clean_queries = [str(query or "").strip() for query in queries if str(query or "").strip()]
+def create_group(
+    *,
+    name: str,
+    queries: List[str],
+    label: str | None = None,
+    tags: Iterable[str] | None = None,
+    context: str | None = None,
+    template: str | None = None,
+    schedule: Dict[str, Any] | None = None,
+    operator_hints: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    clean_queries = [
+        str(query or "").strip() for query in queries if str(query or "").strip()
+    ]
     if not clean_queries:
         raise ValueError("키워드 그룹에는 최소 1개 이상의 쿼리가 필요합니다.")
     now = datetime.now().isoformat(timespec="seconds")
@@ -98,28 +117,59 @@ def create_group(*, name: str, queries: List[str], label: str | None = None, tag
     with connect() as conn:
         cur = conn.execute(
             "INSERT INTO keyword_groups(name, label, tags_json, context, template, schedule_json, operator_hint_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (name, label, json.dumps(tag_values, ensure_ascii=False), context, template, json.dumps(schedule or {}, ensure_ascii=False), json.dumps(operator_hints or {}, ensure_ascii=False), now, now),
+            (
+                name,
+                label,
+                json.dumps(tag_values, ensure_ascii=False),
+                context,
+                template,
+                json.dumps(schedule or {}, ensure_ascii=False),
+                json.dumps(operator_hints or {}, ensure_ascii=False),
+                now,
+                now,
+            ),
         )
         assert cur.lastrowid is not None
         group_id = int(cur.lastrowid)
         for idx, query in enumerate(clean_queries, start=1):
-            conn.execute("INSERT INTO group_queries(group_id, position, raw_query) VALUES (?, ?, ?)", (group_id, idx, query))
+            conn.execute(
+                "INSERT INTO group_queries(group_id, position, raw_query) VALUES (?, ?, ?)",
+                (group_id, idx, query),
+            )
     return get_group(name)
 
 
-def update_group(name_or_id: str | int, *, label: str | None = None, context: str | None = None, tags: Iterable[str] | None | object = None, template: str | None = None, schedule: Dict[str, Any] | None = None, operator_hints: Dict[str, Any] | None = None, replace_queries: List[str] | None = None, add_queries: List[str] | None = None, remove_queries: List[str] | None = None) -> Dict[str, Any]:
+def update_group(
+    name_or_id: str | int,
+    *,
+    label: str | None = None,
+    context: str | None = None,
+    tags: Iterable[str] | None | object = None,
+    template: str | None = None,
+    schedule: Dict[str, Any] | None = None,
+    operator_hints: Dict[str, Any] | None = None,
+    replace_queries: List[str] | None = None,
+    add_queries: List[str] | None = None,
+    remove_queries: List[str] | None = None,
+) -> Dict[str, Any]:
     group = get_group(name_or_id)
     group_id = group["id"]
     new_label = group["label"] if label is None else label
     new_context = group["context"] if context is None else context
     new_template = group["template"] if template is None else template
     new_schedule = group["schedule"] if schedule is None else schedule
-    new_operator_hints = group["operator_hints"] if operator_hints is None else operator_hints
+    new_operator_hints = (
+        group["operator_hints"] if operator_hints is None else operator_hints
+    )
     new_tags = group["tags"] if tags is None else normalize_tags(tags)  # type: ignore[arg-type]
 
     queries = list(group["queries"])
     if replace_queries is not None:
-        queries = [str(query or "").strip() for query in replace_queries if str(query or "").strip()]
+        queries = [
+            str(query or "").strip()
+            for query in replace_queries
+            if str(query or "").strip()
+        ]
     else:
         for query in add_queries or []:
             cleaned = str(query or "").strip()
@@ -135,18 +185,33 @@ def update_group(name_or_id: str | int, *, label: str | None = None, context: st
     with connect() as conn:
         conn.execute(
             "UPDATE keyword_groups SET label = ?, tags_json = ?, context = ?, template = ?, schedule_json = ?, operator_hint_json = ?, updated_at = ? WHERE id = ?",
-            (new_label, json.dumps(new_tags, ensure_ascii=False), new_context, new_template, json.dumps(new_schedule, ensure_ascii=False), json.dumps(new_operator_hints, ensure_ascii=False), now, group_id),
+            (
+                new_label,
+                json.dumps(new_tags, ensure_ascii=False),
+                new_context,
+                new_template,
+                json.dumps(new_schedule, ensure_ascii=False),
+                json.dumps(new_operator_hints, ensure_ascii=False),
+                now,
+                group_id,
+            ),
         )
         conn.execute("DELETE FROM group_queries WHERE group_id = ?", (group_id,))
         for idx, query in enumerate(queries, start=1):
-            conn.execute("INSERT INTO group_queries(group_id, position, raw_query) VALUES (?, ?, ?)", (group_id, idx, query))
+            conn.execute(
+                "INSERT INTO group_queries(group_id, position, raw_query) VALUES (?, ?, ?)",
+                (group_id, idx, query),
+            )
     return get_group(group_id)
 
 
 def remove_group(name_or_id: str | int) -> int:
     field = "id" if isinstance(name_or_id, int) or str(name_or_id).isdigit() else "name"
     with connect() as conn:
-        cur = conn.execute(f"DELETE FROM keyword_groups WHERE {field} = ?", (int(name_or_id) if field == "id" else name_or_id,))
+        cur = conn.execute(
+            f"DELETE FROM keyword_groups WHERE {field} = ?",
+            (int(name_or_id) if field == "id" else name_or_id,),
+        )
         return int(cur.rowcount or 0)
 
 

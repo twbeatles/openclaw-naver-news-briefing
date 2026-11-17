@@ -21,7 +21,11 @@ from nb_cli.rendering import _dedupe_preserve_order, _print_payload
 
 def cmd_plan(args: argparse.Namespace) -> int:
     plan = parse_automation_request(args.request)
-    _print_payload(plan_to_dict(plan), as_json=args.json, render_text=lambda _: render_plan_text(plan))
+    _print_payload(
+        plan_to_dict(plan),
+        as_json=args.json,
+        render_text=lambda _: render_plan_text(plan),
+    )
     return 0
 
 
@@ -37,7 +41,9 @@ def cmd_integration_plan(args: argparse.Namespace) -> int:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as fp:
             json.dump(bundle, fp, ensure_ascii=False, indent=2)
-    _print_payload(bundle, as_json=args.json, render_text=render_integration_bundle_text)
+    _print_payload(
+        bundle, as_json=args.json, render_text=render_integration_bundle_text
+    )
     return 0
 
 
@@ -45,7 +51,9 @@ def cmd_plan_save(args: argparse.Namespace) -> int:
     plan = parse_automation_request(args.request)
     created: Dict[str, Any] = {"plan": plan_to_dict(plan), "created": []}
     name = args.name or plan.name_hint
-    label = args.label or ("아침 브리핑" if plan.template == "morning-briefing" else None)
+    label = args.label or (
+        "아침 브리핑" if plan.template == "morning-briefing" else None
+    )
     tags = list(args.tag or [])
     if plan.schedule.kind != "manual":
         tags.append(plan.schedule.kind)
@@ -55,10 +63,14 @@ def cmd_plan_save(args: argparse.Namespace) -> int:
         tags.append("group")
     tags = _dedupe_preserve_order(tags)
     if not plan.queries:
-        raise ValueError("저장 가능한 주제 키워드를 찾지 못했습니다. 요청에 관심 주제를 포함해 주세요.")
+        raise ValueError(
+            "저장 가능한 주제 키워드를 찾지 못했습니다. 요청에 관심 주제를 포함해 주세요."
+        )
 
     if args.as_type == "watch" and plan.query_mode == "group":
-        raise ValueError("여러 주제를 포함한 그룹형 브리핑 요청입니다. --as group 으로 저장해 주세요.")
+        raise ValueError(
+            "여러 주제를 포함한 그룹형 브리핑 요청입니다. --as group 으로 저장해 주세요."
+        )
 
     if args.as_type == "group" or plan.query_mode == "group":
         group = create_group(
@@ -92,7 +104,18 @@ def cmd_plan_save(args: argparse.Namespace) -> int:
         )
         created["created"].append({"type": "watch", "value": rule})
 
-    _print_payload(created, as_json=args.json, render_text=lambda payload: render_plan_text(plan) + "\n- 저장 결과:\n" + "\n".join(f"  - {item['type']}: {item['value']['name']}" for item in payload['created']))
+    _print_payload(
+        created,
+        as_json=args.json,
+        render_text=lambda payload: (
+            render_plan_text(plan)
+            + "\n- 저장 결과:\n"
+            + "\n".join(
+                f"  - {item['type']}: {item['value']['name']}"
+                for item in payload["created"]
+            )
+        ),
+    )
     return 0
 
 

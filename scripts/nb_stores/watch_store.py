@@ -94,7 +94,23 @@ def list_rules() -> List[Dict[str, Any]]:
     return result
 
 
-def add_rule(*, name: str, raw_query: str, search_query: str, db_keyword: str, exclude_words: List[str], fetch_key: str, days: int | None, limit: int, label: str | None = None, tags: Iterable[str] | None = None, context: str | None = None, template: str | None = None, schedule: Dict[str, Any] | None = None, operator_hints: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def add_rule(
+    *,
+    name: str,
+    raw_query: str,
+    search_query: str,
+    db_keyword: str,
+    exclude_words: List[str],
+    fetch_key: str,
+    days: int | None,
+    limit: int,
+    label: str | None = None,
+    tags: Iterable[str] | None = None,
+    context: str | None = None,
+    template: str | None = None,
+    schedule: Dict[str, Any] | None = None,
+    operator_hints: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     now = datetime.now().isoformat(timespec="seconds")
     with connect() as conn:
         conn.execute(
@@ -128,22 +144,41 @@ def get_rule(name_or_id: str | int) -> Dict[str, Any]:
     query = "SELECT id, name, raw_query, search_query, db_keyword, exclude_json, fetch_key, days, limit_count, label, tags_json, context, template, schedule_json, operator_hint_json, created_at, updated_at, last_checked_at, last_new_count FROM watch_rules WHERE {} = ?"
     field = "id" if isinstance(name_or_id, int) or str(name_or_id).isdigit() else "name"
     with connect() as conn:
-        row = conn.execute(query.format(field), (int(name_or_id) if field == "id" else name_or_id,)).fetchone()
+        row = conn.execute(
+            query.format(field), (int(name_or_id) if field == "id" else name_or_id,)
+        ).fetchone()
     if not row:
         raise KeyError(f"watch rule not found: {name_or_id}")
     return {
-        "id": row[0], "name": row[1], "raw_query": row[2], "search_query": row[3], "db_keyword": row[4],
-        "exclude_words": json.loads(row[5]), "fetch_key": row[6], "days": row[7], "limit": row[8],
-        "label": row[9], "tags": json.loads(row[10] or "[]"), "context": row[11], "template": row[12],
-        "schedule": json.loads(row[13] or "{}"), "operator_hints": json.loads(row[14] or "{}"),
-        "created_at": row[15], "updated_at": row[16], "last_checked_at": row[17], "last_new_count": row[18],
+        "id": row[0],
+        "name": row[1],
+        "raw_query": row[2],
+        "search_query": row[3],
+        "db_keyword": row[4],
+        "exclude_words": json.loads(row[5]),
+        "fetch_key": row[6],
+        "days": row[7],
+        "limit": row[8],
+        "label": row[9],
+        "tags": json.loads(row[10] or "[]"),
+        "context": row[11],
+        "template": row[12],
+        "schedule": json.loads(row[13] or "{}"),
+        "operator_hints": json.loads(row[14] or "{}"),
+        "created_at": row[15],
+        "updated_at": row[16],
+        "last_checked_at": row[17],
+        "last_new_count": row[18],
     }
 
 
 def remove_rule(name_or_id: str | int) -> int:
     field = "id" if isinstance(name_or_id, int) or str(name_or_id).isdigit() else "name"
     with connect() as conn:
-        cur = conn.execute(f"DELETE FROM watch_rules WHERE {field} = ?", (int(name_or_id) if field == 'id' else name_or_id,))
+        cur = conn.execute(
+            f"DELETE FROM watch_rules WHERE {field} = ?",
+            (int(name_or_id) if field == "id" else name_or_id,),
+        )
         return int(cur.rowcount or 0)
 
 
@@ -155,7 +190,10 @@ def mark_seen(watch_id: int, items: Iterable[Dict[str, Any]]) -> List[Dict[str, 
             link = str(item.get("link", "") or "").strip()
             if not link:
                 continue
-            exists = conn.execute("SELECT 1 FROM seen_items WHERE watch_id = ? AND link = ?", (watch_id, link)).fetchone()
+            exists = conn.execute(
+                "SELECT 1 FROM seen_items WHERE watch_id = ? AND link = ?",
+                (watch_id, link),
+            ).fetchone()
             if exists:
                 continue
             conn.execute(

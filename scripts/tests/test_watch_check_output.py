@@ -10,47 +10,55 @@ class DummyArgs(Namespace):
 
 
 def test_cmd_watch_check_renders_friendlier_status(monkeypatch, capsys):
-    monkeypatch.setattr(watch_cmd, "get_rule", lambda name: {
-        "id": 1,
-        "name": name,
-        "search_query": "방미심위",
-        "exclude_words": [],
-        "days": None,
-    })
-
-    monkeypatch.setattr(watch_cmd, "_run_rule", lambda rule: {
-        "rule": rule,
-        "summary": {
-            "query": "방미심위",
-            "total": 1068,
-            "displayed": 10,
-            "new_count": 2,
-            "filtered_out": 0,
-            "too_old": 0,
+    monkeypatch.setattr(
+        watch_cmd,
+        "get_rule",
+        lambda name: {
+            "id": 1,
+            "name": name,
+            "search_query": "방미심위",
+            "exclude_words": [],
+            "days": None,
         },
-        "new_items": [
-            {
-                "title": "새 기사 A",
-                "publisher": "연합",
-                "link": "https://example.com/a",
-                "pub_date": "Fri, 27 Mar 2026 17:05:00 +0900",
+    )
+
+    monkeypatch.setattr(
+        watch_cmd,
+        "_run_rule",
+        lambda rule: {
+            "rule": rule,
+            "summary": {
+                "query": "방미심위",
+                "total": 1068,
+                "displayed": 10,
+                "new_count": 2,
+                "filtered_out": 0,
+                "too_old": 0,
             },
-            {
-                "title": "새 기사 B",
-                "publisher": "뉴스1",
-                "link": "https://example.com/b",
-                "pub_date": "Fri, 27 Mar 2026 16:50:00 +0900",
-            },
-        ],
-        "all_items": [
-            {
-                "title": "새 기사 A",
-                "publisher": "연합",
-                "link": "https://example.com/a",
-                "pub_date_iso": "2026-03-27T17:05:00+09:00",
-            }
-        ],
-    })
+            "new_items": [
+                {
+                    "title": "새 기사 A",
+                    "publisher": "연합",
+                    "link": "https://example.com/a",
+                    "pub_date": "Fri, 27 Mar 2026 17:05:00 +0900",
+                },
+                {
+                    "title": "새 기사 B",
+                    "publisher": "뉴스1",
+                    "link": "https://example.com/b",
+                    "pub_date": "Fri, 27 Mar 2026 16:50:00 +0900",
+                },
+            ],
+            "all_items": [
+                {
+                    "title": "새 기사 A",
+                    "publisher": "연합",
+                    "link": "https://example.com/a",
+                    "pub_date_iso": "2026-03-27T17:05:00+09:00",
+                }
+            ],
+        },
+    )
 
     args = DummyArgs(name_or_id="bangmisimwi", json=False)
     assert cli.cmd_watch_check(args) == 0

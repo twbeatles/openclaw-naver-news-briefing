@@ -35,7 +35,9 @@ class ResponseLike(Protocol):
 
 
 class SessionLike(Protocol):
-    def get(self, url: str, *, headers: Dict[str, str], params: Dict[str, Any], timeout: int) -> ResponseLike: ...
+    def get(
+        self, url: str, *, headers: Dict[str, str], params: Dict[str, Any], timeout: int
+    ) -> ResponseLike: ...
 
 
 def naver_auth_headers(client_id: str, client_secret: str) -> Dict[str, str]:
@@ -76,9 +78,15 @@ def clean_item(item: Dict[str, Any]) -> NewsItem:
 
     publisher = "정보 없음"
     if original_link:
-        publisher = urllib.parse.urlparse(original_link).netloc.replace("www.", "") or publisher
+        publisher = (
+            urllib.parse.urlparse(original_link).netloc.replace("www.", "") or publisher
+        )
     elif final_link:
-        publisher = "네이버뉴스" if "news.naver.com" in final_link else urllib.parse.urlparse(final_link).netloc.replace("www.", "")
+        publisher = (
+            "네이버뉴스"
+            if "news.naver.com" in final_link
+            else urllib.parse.urlparse(final_link).netloc.replace("www.", "")
+        )
     return NewsItem(
         title=title,
         description=desc,
@@ -91,7 +99,7 @@ def clean_item(item: Dict[str, Any]) -> NewsItem:
 
 
 def _retry_backoff_seconds(attempt: int) -> float:
-    return min(8.0, 0.5 * (2**max(0, attempt)))
+    return min(8.0, 0.5 * (2 ** max(0, attempt)))
 
 
 def fetch_news(
@@ -112,7 +120,12 @@ def fetch_news(
         raise ValueError("네이버 API 자격증명이 설정되지 않았습니다.")
 
     active_session = session or requests.Session()
-    params = {"query": search_query, "display": min(max(limit, 10), 100), "start": 1, "sort": "date"}
+    params = {
+        "query": search_query,
+        "display": min(max(limit, 10), 100),
+        "start": 1,
+        "sort": "date",
+    }
 
     # Owner decision D3: NAVER API HUB URL이 정답. Legacy 개발자센터
     # (openapi.naver.com) 폴백 제거 — 해당 키는 더 이상 유효하지 않음.
@@ -124,14 +137,18 @@ def fetch_news(
     resp: ResponseLike | None = None
     for ep_url, ep_headers in endpoint_candidates:
         attempts = max(1, int(max_retries or 1))
-        current_resp = active_session.get(ep_url, headers=ep_headers, params=params, timeout=timeout)
+        current_resp = active_session.get(
+            ep_url, headers=ep_headers, params=params, timeout=timeout
+        )
         for attempt in range(1, attempts):
             if current_resp.status_code == 200:
                 break
             if not 500 <= int(current_resp.status_code or 0) < 600:
                 break
             time.sleep(_retry_backoff_seconds(attempt - 1))
-            current_resp = active_session.get(ep_url, headers=ep_headers, params=params, timeout=timeout)
+            current_resp = active_session.get(
+                ep_url, headers=ep_headers, params=params, timeout=timeout
+            )
         last_resp = current_resp
         if current_resp.status_code == 200:
             resp = current_resp
@@ -149,7 +166,9 @@ def fetch_news(
                 error_msg = f"HTTP {status}: {getattr(target_resp, 'text', '')[:200]}"
             except Exception:
                 error_msg = f"HTTP {status}"
-        raise RuntimeError(format_naver_http_error(status, error_code, error_msg or "알 수 없는 오류"))
+        raise RuntimeError(
+            format_naver_http_error(status, error_code, error_msg or "알 수 없는 오류")
+        )
 
     data = resp.json()
     exclude_words_lc = [w.lower() for w in exclude_words if w]

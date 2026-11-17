@@ -46,7 +46,9 @@ def _brief_lines(result: Dict[str, Any], *, title: str | None = None) -> List[st
     return lines
 
 
-def _print_payload(payload: Any, *, as_json: bool, render_text: Callable[[Any], str] | None = None) -> None:
+def _print_payload(
+    payload: Any, *, as_json: bool, render_text: Callable[[Any], str] | None = None
+) -> None:
     if as_json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
@@ -63,7 +65,10 @@ def _format_watch_text(rule: Dict[str, Any]) -> str:
         extra.append(f"template={rule['template']}")
     if rule.get("schedule", {}).get("label"):
         extra.append(f"schedule={rule['schedule']['label']}")
-    lines = [f"- {rule['name']}: {rule['raw_query']}" + (f" ({'; '.join(extra)})" if extra else "")]
+    lines = [
+        f"- {rule['name']}: {rule['raw_query']}"
+        + (f" ({'; '.join(extra)})" if extra else "")
+    ]
     if rule.get("label"):
         lines.append(f"  label: {rule['label']}")
     if rule.get("tags"):
@@ -89,7 +94,14 @@ def _format_watch_status_lines(entry: Dict[str, Any]) -> List[str]:
         f"- 현재 검색 상위 기사 수: {current_top_count}건",
     ]
     if items:
-        latest_pub = next((item.get("pub_date_iso") or item.get("pub_date") for item in items if item.get("pub_date_iso") or item.get("pub_date")), None)
+        latest_pub = next(
+            (
+                item.get("pub_date_iso") or item.get("pub_date")
+                for item in items
+                if item.get("pub_date_iso") or item.get("pub_date")
+            ),
+            None,
+        )
         if latest_pub:
             lines.append(f"- 현재 기준 최신 기사 시각: {latest_pub}")
     return lines
@@ -115,7 +127,9 @@ def _format_group_text(group: Dict[str, Any]) -> str:
 DEFAULT_TEST_QUERY = "최근 1일 반도체 뉴스"
 
 
-def _render_setup_success(timeout: int, *, live_checked: bool = False, live_query: str | None = None) -> str:
+def _render_setup_success(
+    timeout: int, *, live_checked: bool = False, live_query: str | None = None
+) -> str:
     lines = [
         "네이버 Search API 자격증명을 저장했습니다.",
         "- 저장 위치: data/config.json",
@@ -128,7 +142,7 @@ def _render_setup_success(timeout: int, *, live_checked: bool = False, live_quer
     lines.extend(
         [
             "- 다음 단계: python scripts/naver_news_briefing.py check-credentials --json",
-            "- 그 다음: python scripts/naver_news_briefing.py search \"최근 3일 반도체 뉴스 브리핑\"",
+            '- 그 다음: python scripts/naver_news_briefing.py search "최근 3일 반도체 뉴스 브리핑"',
         ]
     )
     return "\n".join(lines)
@@ -136,7 +150,9 @@ def _render_setup_success(timeout: int, *, live_checked: bool = False, live_quer
 
 def _render_check_credentials_text(payload: Dict[str, Any]) -> str:
     lines = [
-        "네이버 Search API 자격증명이 설정되어 있습니다." if payload["configured"] else "아직 네이버 Search API 자격증명이 설정되지 않았습니다.",
+        "네이버 Search API 자격증명이 설정되어 있습니다."
+        if payload["configured"]
+        else "아직 네이버 Search API 자격증명이 설정되지 않았습니다.",
         f"- client_id 저장 여부: {'예' if payload['client_id_present'] else '아니오'}",
         f"- client_secret 저장 여부: {'예' if payload['client_secret_present'] else '아니오'}",
         f"- 요청 타임아웃: {payload['timeout']}초",
@@ -145,16 +161,22 @@ def _render_check_credentials_text(payload: Dict[str, Any]) -> str:
     if isinstance(live_check, dict):
         if live_check.get("ok"):
             lines.append(f"- 라이브 API 확인: 성공 ({live_check.get('query')})")
-            lines.append(f"- 테스트 결과: total={live_check.get('total', 0)}, displayed={live_check.get('displayed', 0)}")
+            lines.append(
+                f"- 테스트 결과: total={live_check.get('total', 0)}, displayed={live_check.get('displayed', 0)}"
+            )
         else:
             lines.append(f"- 라이브 API 확인: 실패 ({live_check.get('query')})")
             if live_check.get("error"):
                 lines.append(f"- 오류: {live_check['error']}")
     if payload["configured"]:
-        lines.append("- 다음 단계: search / watch / brief-multi / plan-save 를 실행하면 됩니다.")
+        lines.append(
+            "- 다음 단계: search / watch / brief-multi / plan-save 를 실행하면 됩니다."
+        )
     else:
         lines.append("- 먼저 실행: python scripts/naver_news_briefing.py setup")
-        lines.append("- 확인: python scripts/naver_news_briefing.py check-credentials --json")
+        lines.append(
+            "- 확인: python scripts/naver_news_briefing.py check-credentials --json"
+        )
     return "\n".join(lines)
 
 
@@ -185,7 +207,9 @@ def _dedupe_preserve_order(values: List[str]) -> List[str]:
     return ordered
 
 
-def _format_missing_named_resource(resource_label: str, missing_name: str, available_names: List[str]) -> str:
+def _format_missing_named_resource(
+    resource_label: str, missing_name: str, available_names: List[str]
+) -> str:
     lines = [f"등록된 {resource_label}을(를) 찾지 못했습니다: {missing_name}"]
     if available_names:
         lines.append("현재 등록된 항목: " + ", ".join(available_names))

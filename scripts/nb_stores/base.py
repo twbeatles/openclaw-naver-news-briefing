@@ -9,7 +9,9 @@ from _paths import ensure_data_dir
 
 
 @contextmanager
-def sqlite_database(db_path: Path | str, schema: str, migrations: Dict[str, Dict[str, str]]) -> Iterator[sqlite3.Connection]:
+def sqlite_database(
+    db_path: Path | str, schema: str, migrations: Dict[str, Dict[str, str]]
+) -> Iterator[sqlite3.Connection]:
     """스키마 생성 + 누락 컬럼 마이그레이션을 적용한 SQLite 연결을 제공한다."""
     ensure_data_dir()
     conn = sqlite3.connect(db_path)
@@ -17,7 +19,9 @@ def sqlite_database(db_path: Path | str, schema: str, migrations: Dict[str, Dict
         conn.execute("PRAGMA foreign_keys = ON")
         conn.executescript(schema)
         for table, table_migrations in migrations.items():
-            columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            columns = {
+                row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+            }
             for column, sql in table_migrations.items():
                 if column not in columns:
                     conn.execute(sql)
