@@ -15,3 +15,9 @@ __watch_stdout.txt
 AGENTS.md
 specs/
 
+# Added by environment hygiene
+build/
+dist/
+*.spec
+*.log
+
