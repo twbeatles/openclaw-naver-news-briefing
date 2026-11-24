@@ -83,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("query")
     p.add_argument("--limit", type=int, default=10)
     p.add_argument("--days", type=int)
+    p.add_argument("--sort", choices=["date", "sim"], default="date")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_search)
 
@@ -153,6 +154,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--group", action="append")
     p.add_argument("--limit", type=int, default=5)
     p.add_argument("--days", type=int)
+    p.add_argument("--sort", choices=["date", "sim"], default="date")
     p.add_argument("--template", choices=supported_templates())
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_brief_multi)

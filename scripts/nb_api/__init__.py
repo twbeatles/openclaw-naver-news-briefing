@@ -1,36 +1,55 @@
 from __future__ import annotations
 
 from nb_api.client import (
+    ALLOWED_API_SORTS,
+    API_FORMAT,
     API_HUB_GUIDE_URL,
+    API_HUB_MIGRATION_URL,
     API_HUB_PRODUCT_URL,
     API_KEY_HEADER,
     API_KEY_ID_HEADER,
     API_URL,
+    DEFAULT_API_SORT,
     MAX_RETRIES,
     ResponseLike,
     SessionLike,
     clean_item,
     fetch_news,
     naver_auth_headers,
+    normalize_api_sort,
     parse_pub_date,
 )
-from nb_api.errors import format_naver_http_error, parse_naver_api_error
+from nb_api.errors import (
+    NAVER_SEARCH_ERROR_HINTS,
+    apply_naver_error_fields,
+    format_naver_http_error,
+    naver_error_hint,
+    parse_naver_api_error,
+)
 from nb_api.models import NewsItem
 
 __all__ = [
+    "ALLOWED_API_SORTS",
+    "API_FORMAT",
     "API_HUB_GUIDE_URL",
+    "API_HUB_MIGRATION_URL",
     "API_HUB_PRODUCT_URL",
     "API_KEY_HEADER",
     "API_KEY_ID_HEADER",
     "API_URL",
+    "DEFAULT_API_SORT",
     "MAX_RETRIES",
+    "NAVER_SEARCH_ERROR_HINTS",
     "NewsItem",
     "ResponseLike",
     "SessionLike",
+    "apply_naver_error_fields",
     "clean_item",
     "fetch_news",
     "format_naver_http_error",
     "naver_auth_headers",
+    "naver_error_hint",
+    "normalize_api_sort",
     "parse_naver_api_error",
     "parse_pub_date",
 ]

@@ -219,7 +219,11 @@ python scripts/naver_news_briefing.py plan-save \
 ```bash
 python scripts/naver_news_briefing.py search "최근 3일 반도체 뉴스 브리핑 -광고"
 python scripts/naver_news_briefing.py search "AI 데이터센터 뉴스" --json
+python scripts/naver_news_briefing.py search "반도체 뉴스" --sort sim
 ```
+
+- `--sort` 기본값은 `date`(최신순)이며, 정확도순이 필요하면 `--sort sim`을 사용합니다 (`brief-multi`도 동일).
+- 모든 요청에 `format=json`을 명시 전송하고, 오류 코드별 한글 안내(SE01~SE99)와 429 일일 한도 안내를 표시합니다.
 
 ### watch
 

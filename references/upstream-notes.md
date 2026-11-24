@@ -12,12 +12,13 @@ Use these notes when extending or debugging the skill.
   - Preserve `build_fetch_key(search_query, exclude_words)` normalization.
 - `core.config_store.py`
   - Reuse Windows-first credential handling with DPAPI-encrypted `client_secret_enc` and atomic config writes.
-- `core.naver_api` + `core.workers_support.api_worker.ApiWorker` (v32.7.6+ NAVER API HUB)
+- `core.naver_api` + `core.workers_support.api_worker.ApiWorker` (v32.12.0 NAVER API HUB)
   - Reuse request shape: `https://naverapihub.apigw.ntruss.com/search/v1/news`
   - Use gateway headers `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY`
-  - Reuse `parse_naver_api_error` (Search flat + Gateway nested) and `format_naver_http_error` (401/403 auth 안내)
+  - Reuse `parse_naver_api_error` (Search flat + Gateway nested + `errMsg`/`errId` 호환) and `format_naver_http_error` (401/403 auth 안내, 429 일일 한도 안내, SE01~SE99 한글 힌트)
   - Legacy Developers Center endpoint로는 되돌리지 않는다. 기존 개발자센터 키는 무효하다.
-  - Use `sort=date`, clean `<b>` tags, prefer `news.naver.com` links when present, filter exclude words on title/description.
+  - Send `format=json` explicitly, default `sort=date` with `sim` opt-in via `normalize_api_sort`, clean `<b>` tags, prefer `news.naver.com` links when present, filter exclude words on title/description.
+  - `lastBuildDate`는 `raw_meta`로 유지한다. 일일 호출량 추적(`core.api_quota`)과 리다이렉트 차단·`Retry-After` 대기는 GUI 연속 새로고침용이라 이 스킬에는 이식하지 않는다.
 - Repo persistence style
   - Keep state on local disk inside the skill (`data/`), use atomic JSON for config and SQLite for watch state / dedupe.
 

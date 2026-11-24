@@ -24,7 +24,9 @@ def _perform_live_check(query: str, *, limit: int = 1) -> Dict[str, Any]:
     )
 
 
-def run_search(query: str, *, limit: int, days: int | None) -> Dict[str, Any]:
+def run_search(
+    query: str, *, limit: int, days: int | None, sort: str = "date"
+) -> Dict[str, Any]:
     """원샷 검색을 실행하고 결과 payload를 반환한다(출력은 명령 계층 담당)."""
     intent = build_intent(query, limit=limit, days=days)
     client_id, client_secret, timeout, _ = get_runtime_credentials()
@@ -36,6 +38,7 @@ def run_search(query: str, *, limit: int, days: int | None) -> Dict[str, Any]:
         limit=intent.limit,
         days=intent.days,
         timeout=timeout,
+        sort=sort,
     )
     result["intent"] = {
         "db_keyword": intent.db_keyword,
@@ -55,6 +58,7 @@ def _run_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
         limit=rule["limit"],
         days=rule.get("days"),
         timeout=timeout,
+        sort=str(rule.get("sort", "date") or "date"),
     )
     new_items = mark_seen(rule["id"], result["items"])
     return {
@@ -77,6 +81,7 @@ def _run_query_entry(
     *,
     limit: int,
     days: int | None,
+    sort: str = "date",
     group: Dict[str, Any] | None = None,
     label: str | None = None,
     context: str | None = None,
@@ -91,6 +96,7 @@ def _run_query_entry(
         limit=intent.limit,
         days=intent.days,
         timeout=timeout,
+        sort=sort,
     )
     result["intent"] = {
         "db_keyword": intent.db_keyword,

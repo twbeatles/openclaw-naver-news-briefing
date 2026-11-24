@@ -1,12 +1,19 @@
 import pytest
 from nb_api import (
+    ALLOWED_API_SORTS,
+    API_FORMAT,
     API_KEY_HEADER,
     API_KEY_ID_HEADER,
     API_URL,
+    DEFAULT_API_SORT,
+    NAVER_SEARCH_ERROR_HINTS,
+    apply_naver_error_fields,
     clean_item,
     fetch_news,
     format_naver_http_error,
     naver_auth_headers,
+    naver_error_hint,
+    normalize_api_sort,
     parse_naver_api_error,
 )
 
@@ -190,3 +197,96 @@ def test_fetch_news_auth_error_is_actionable():
             timeout=5,
             session=UnauthorizedSession(),
         )
+
+
+def test_search_format_is_json_explicit():
+    assert API_FORMAT == "json"
+
+
+def test_normalize_api_sort_matches_upstream_policy():
+    assert DEFAULT_API_SORT == "date"
+    assert set(ALLOWED_API_SORTS) == {"date", "sim"}
+    assert normalize_api_sort("sim") == "sim"
+    assert normalize_api_sort("DATE") == "date"
+    assert normalize_api_sort("bogus") == "date"
+    assert normalize_api_sort("", fallback="sim") == "sim"
+    assert normalize_api_sort(None, fallback="bogus") == "date"
+
+
+def test_fetch_news_sends_format_and_default_sort():
+    session = CapturingSession(SAMPLE)
+    result = fetch_news(
+        client_id="id",
+        client_secret="secret",
+        search_query="반도체",
+        exclude_words=[],
+        limit=5,
+        timeout=5,
+        session=session,
+    )
+    assert session.calls[0]["params"]["format"] == "json"
+    assert session.calls[0]["params"]["sort"] == "date"
+    assert result["sort"] == "date"
+
+
+def test_fetch_news_accepts_sim_sort():
+    session = CapturingSession(SAMPLE)
+    result = fetch_news(
+        client_id="id",
+        client_secret="secret",
+        search_query="반도체",
+        exclude_words=[],
+        limit=5,
+        timeout=5,
+        sort="sim",
+        session=session,
+    )
+    assert session.calls[0]["params"]["sort"] == "sim"
+    assert result["sort"] == "sim"
+
+
+def test_parse_legacy_err_msg_shape():
+    code, message = parse_naver_api_error(
+        {"errId": "E001", "errMsg": "legacy failure"}
+    )
+    assert (code, message) == ("E001", "legacy failure")
+
+
+def test_error_hint_covers_documented_codes():
+    assert "display" in naver_error_hint("SE02")
+    assert "1,000" in naver_error_hint("SE03")
+    assert "sort" in naver_error_hint("SE04").lower()
+    assert naver_error_hint("UNKNOWN_CODE") == ""
+    assert set(NAVER_SEARCH_ERROR_HINTS) >= {
+        "SE01",
+        "SE02",
+        "SE03",
+        "SE04",
+        "SE05",
+        "SE06",
+        "SE99",
+    }
+
+
+def test_format_bad_request_includes_hint():
+    text = format_naver_http_error(400, "SE02", "Invalid display value.")
+    assert "400" in text
+    assert "SE02" in text
+    assert "1~100" in text
+    assert "Invalid display value." in text
+
+
+def test_format_rate_limit_mentions_daily_quota():
+    text = format_naver_http_error(429, "", "Too Many Requests")
+    assert "429" in text
+    assert "25,000" in text
+    assert "Too Many Requests" in text
+
+
+def test_apply_naver_error_fields_fills_mapping():
+    target: dict = {}
+    code, message = apply_naver_error_fields(
+        target, {"errorCode": "SE04", "errorMessage": "bad sort"}
+    )
+    assert (code, message) == ("SE04", "bad sort")
+    assert target == {"error_code": "SE04", "error_message": "bad sort"}

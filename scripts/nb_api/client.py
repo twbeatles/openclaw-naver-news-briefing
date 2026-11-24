@@ -13,15 +13,34 @@ import requests
 from nb_api.errors import format_naver_http_error, parse_naver_api_error
 from nb_api.models import NewsItem
 
-# Upstream: navernews-tabsearch core/naver_api.py (NAVER API HUB, v32.7.6+).
+# Upstream: navernews-tabsearch core/naver_api.py (NAVER API HUB, v32.12.0).
 # Legacy Developers Center endpoint (openapi.naver.com, X-Naver-Client-*)는
 # 더 이상 유효하지 않으므로 API HUB 계약을 따른다.
 API_URL = "https://naverapihub.apigw.ntruss.com/search/v1/news"
+# 응답 형식. 공식 문서 기본값은 json이지만 서버 기본값에 의존하지 않고 명시한다.
+# (공식 문서: format=json (default) | xml)
+API_FORMAT = "json"
 API_KEY_ID_HEADER = "X-NCP-APIGW-API-KEY-ID"
 API_KEY_HEADER = "X-NCP-APIGW-API-KEY"
 API_HUB_PRODUCT_URL = "https://www.ncloud.com/product/applicationService/naverApiHub"
 API_HUB_GUIDE_URL = "https://guide.ncloud-docs.com/docs/apihub-use"
+API_HUB_MIGRATION_URL = "https://guide.ncloud-docs.com/docs/apihub-migration"
 MAX_RETRIES = 3
+
+# 뉴스 검색 정렬. 문서: sim(정확도순, 기본값) | date(최신순).
+# 이 스킬 기본값은 최신 기사 수집에 맞는 date이며, 호출 시 sim을 고를 수 있다.
+ALLOWED_API_SORTS = ("date", "sim")
+DEFAULT_API_SORT = "date"
+
+
+def normalize_api_sort(value: object, fallback: str = DEFAULT_API_SORT) -> str:
+    """검색 정렬 값을 date/sim으로 정규화한다."""
+    text = str(value or "").strip().lower()
+    if text in ALLOWED_API_SORTS:
+        return text
+    if str(fallback or "").strip().lower() in ALLOWED_API_SORTS:
+        return str(fallback).strip().lower()
+    return DEFAULT_API_SORT
 
 
 class ResponseLike(Protocol):
@@ -113,6 +132,7 @@ def fetch_news(
     timeout: int = 15,
     session: SessionLike | None = None,
     max_retries: int = MAX_RETRIES,
+    sort: str = DEFAULT_API_SORT,
 ) -> Dict[str, Any]:
     if not search_query.strip():
         raise ValueError("검색어가 비어 있습니다.")
@@ -124,7 +144,8 @@ def fetch_news(
         "query": search_query,
         "display": min(max(limit, 10), 100),
         "start": 1,
-        "sort": "date",
+        "sort": normalize_api_sort(sort),
+        "format": API_FORMAT,
     }
 
     # Owner decision D3: NAVER API HUB URL이 정답. Legacy 개발자센터
@@ -200,6 +221,7 @@ def fetch_news(
         "query": search_query,
         "exclude_words": exclude_words,
         "days": days,
+        "sort": params["sort"],
         "total": int(data.get("total", 0) or 0),
         "displayed": len(items),
         "filtered_out": filtered_out,
@@ -210,16 +232,21 @@ def fetch_news(
 
 
 __all__ = [
+    "ALLOWED_API_SORTS",
+    "API_FORMAT",
     "API_HUB_GUIDE_URL",
+    "API_HUB_MIGRATION_URL",
     "API_HUB_PRODUCT_URL",
     "API_KEY_HEADER",
     "API_KEY_ID_HEADER",
     "API_URL",
+    "DEFAULT_API_SORT",
     "MAX_RETRIES",
     "ResponseLike",
     "SessionLike",
     "clean_item",
     "fetch_news",
     "naver_auth_headers",
+    "normalize_api_sort",
     "parse_pub_date",
 ]

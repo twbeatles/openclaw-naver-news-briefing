@@ -21,6 +21,8 @@ def _brief_lines(result: Dict[str, Any], *, title: str | None = None) -> List[st
         suffix.append("제외=" + ", ".join(result["exclude_words"]))
     if result.get("days"):
         suffix.append(f"최근 {result['days']}일")
+    if str(result.get("sort", "date") or "date") == "sim":
+        suffix.append("정확도순")
     meta = f" ({'; '.join(suffix)})" if suffix else ""
     lines.append(heading + meta)
     lines.append(f"- 총 검색 결과: {result.get('total', 0)}")

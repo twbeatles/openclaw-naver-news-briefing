@@ -51,6 +51,7 @@ Use the CLI script at `scripts/naver_news_briefing.py`.
 ## Behavior
 
 - Parse positive keywords and `-제외어` using the upstream tab-search policy.
+- Send `format=json` explicitly on every Search API call; default sort is `date` (최신순), with `--sort sim` (정확도순) opt-in on `search`/`brief-multi`.
 - Interpret recent-news phrases such as `오늘`, `최근 3일`, `최근 2주`, `한달`, `이번주`, `지난주` as a date window and remove that phrase from the API search query.
 - Normalize more natural Korean sentence inputs by stripping request phrases, common 조사, duplicate tokens, and Korean exclusion phrases such as `A 말고`, `B 빼고`, `C 제외` into `-제외어` tokens.
 - Parse practical schedule intent from Korean chat requests into `interval`, `daily`, `weekly`, or `manual` plans.

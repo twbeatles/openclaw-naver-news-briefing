@@ -58,7 +58,7 @@ def test_cmd_brief_multi_supports_group_and_query_json(monkeypatch, capsys):
     )
 
     def fake_run_query_entry(
-        query, *, limit, days, group=None, label=None, context=None
+        query, *, limit, days, sort="date", group=None, label=None, context=None
     ):
         return {
             "query": query,

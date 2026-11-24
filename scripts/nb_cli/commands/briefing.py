@@ -17,6 +17,7 @@ def cmd_brief_multi(args: argparse.Namespace) -> int:
     entries: List[Dict[str, Any]] = []
     groups: List[Dict[str, Any]] = []
     template = args.template
+    sort = getattr(args, "sort", "date") or "date"
     for group_name in args.group or []:
         group = get_group(group_name)
         groups.append(group)
@@ -24,10 +25,14 @@ def cmd_brief_multi(args: argparse.Namespace) -> int:
             template = group["template"]
         for query in group["queries"]:
             entries.append(
-                _run_query_entry(query, limit=args.limit, days=args.days, group=group)
+                _run_query_entry(
+                    query, limit=args.limit, days=args.days, sort=sort, group=group
+                )
             )
     for query in args.query or []:
-        entries.append(_run_query_entry(query, limit=args.limit, days=args.days))
+        entries.append(
+            _run_query_entry(query, limit=args.limit, days=args.days, sort=sort)
+        )
     if not entries:
         raise ValueError(
             "brief-multi에는 --query 또는 --group이 최소 1개 이상 필요합니다."
